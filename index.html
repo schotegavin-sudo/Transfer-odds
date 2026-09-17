@@ -55,19 +55,39 @@
   </div>
 </aside>
 
+<div class="wt-scrim" id="wtscrim" hidden></div>
+<div class="wt" id="wt" role="dialog" aria-modal="true" aria-labelledby="wttitle" hidden>
+  <div class="wt-card">
+    <div class="wt-top">
+      <span class="wt-count" id="wtstep">Step 1 of 4</span>
+      <button type="button" class="linky" id="wtskip">Skip for now</button>
+    </div>
+    <div class="wt-rail" aria-hidden="true"><i id="wtfill"></i></div>
+    <h2 id="wttitle"></h2>
+    <p class="wt-lede" id="wtlede"></p>
+    <div class="wt-fields" id="wtbody"></div>
+    <p class="wt-err" id="wterr" role="alert" hidden></p>
+    <p class="wt-note" id="wtnote"></p>
+    <div class="wt-foot">
+      <button type="button" class="btn" id="wtback" hidden>Back</button>
+      <button type="button" class="btn primary" id="wtnext">Start</button>
+    </div>
+  </div>
+</div>
+
 <div class="shell">
   <form class="pane glass" id="pane-record" autocomplete="off">
     <div class="rail-head">
       <h2>Your record</h2>
       <span class="saved" id="savedstate">unsaved</span>
     </div>
-    <p class="hint" id="banner">Loaded with an example record. Change anything and it becomes yours.</p>
+    <p class="hint" id="banner"></p>
 
     <fieldset>
       <legend>Academics</legend>
       <div class="row2">
-        <div class="field"><label for="gpa">Cumulative GPA</label><input type="number" id="gpa" min="0" max="4.3" step="0.01" value="3.42"></div>
-        <div class="field"><label for="credits">Transferable hours</label><input type="number" id="credits" min="0" max="200" step="1" value="48"></div>
+        <div class="field"><label for="gpa">Cumulative GPA</label><input type="number" id="gpa" min="0" max="4.3" step="0.01" value="3.00"></div>
+        <div class="field"><label for="credits">Transferable hours</label><input type="number" id="credits" min="0" max="200" step="1" value="30"></div>
       </div>
       <div class="row2">
         <div class="field"><label for="prereqs">Prerequisites</label>
@@ -90,7 +110,7 @@
 
     <fieldset>
       <legend>Where you are now</legend>
-      <div class="field"><label for="current">Current college</label><input type="text" id="current" value="Santa Monica College"></div>
+      <div class="field"><label for="current">Current college</label><input type="text" id="current" placeholder="Optional — for your own reference"></div>
       <div class="row2">
         <div class="field"><label for="curtype">Institution type</label>
           <select id="curtype">

@@ -40,28 +40,24 @@ const LEGACY_MAJOR = {
   soc: "socsci", hum: "arthum", art: "artstudio", edu: "elemed", und: "undeclared",
 };
 
-const EXAMPLE = {
-  gpa: 3.42, credits: 48, prereqs: "most", blemish: 0,
-  current: "Santa Monica College", curtype: "cc", state: "CA", assoc: "prog",
-  agreement: false, majorId: "psych", term: "fall", essay: 3, activity: 3, context: [],
-  list: [
-    "University of California, Los Angeles",
-    "University of California, Irvine",
-    "University of California, Santa Cruz",
-    "California State University, Long Beach",
-    "California State University, Northridge",
-    "University of Southern California",
-    "Arizona State University",
-    "Western Governors University",
-  ],
-  example: true,
+/* A new visitor starts from nothing: no schools, no borrowed numbers. The
+   walkthrough below fills the four fields that matter before the first
+   school is ever scored. Everything here is a neutral starting point for a
+   control, not a claim about anybody. */
+const BLANK = {
+  gpa: 3.0, credits: 30, prereqs: "most", blemish: 0,
+  current: "", curtype: "cc", state: "CA", assoc: "prog",
+  agreement: false, majorId: "undeclared", term: "fall",
+  essay: 3, activity: 3, context: [], list: [],
 };
 
 /* Built once: everything each school can be found by. */
 const INDEX = new Map(SCHOOLS.map((s) => [s.name, searchIndex(s, STATE_NAMES[s.state])]));
 
 const KEY = "transfer-odds:v1";
-let profile = load() || structuredClone(EXAMPLE);
+const SEEN_KEY = "transfer-odds:walkthrough:v1";
+const saved = load();
+let profile = saved || structuredClone(BLANK);
 let viewingShared = false;
 
 function load() {
@@ -70,7 +66,7 @@ function load() {
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (!p.majorId && p.major) p.majorId = LEGACY_MAJOR[p.major] || "undeclared";
-    return { ...structuredClone(EXAMPLE), ...p, example: false };
+    return { ...structuredClone(BLANK), ...p };
   } catch { return null; }
 }
 function save() {
@@ -151,8 +147,6 @@ function syncForm() {
     el(id).querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.value) === profile[id])));
   }
   el("context").querySelectorAll("[data-ctx]").forEach((i) => (i.checked = profile.context.includes(i.value)));
-  /* The shared-record notice outranks the example notice and stays put. */
-  if (!viewingShared) el("banner").hidden = !profile.example;
   renderMajorNote(major);
 }
 
@@ -189,9 +183,18 @@ function renderMajorNote(major) {
   node.innerHTML = `<b>${esc(major.group)}.</b> ${bits.join(" · ")}.`;
 }
 
+/* The record pane carries one line of standing advice. A shared record
+   replaces it while you are looking at someone else's numbers. */
+function resetBanner() {
+  const b = el("banner");
+  b.className = "hint";
+  b.hidden = false;
+  b.innerHTML = `Nothing is saved until you press <b>Save record</b>, and it never leaves this browser.
+    <button type="button" class="linky" id="rewalk">Run the setup questions again</button>`;
+  el("rewalk").addEventListener("click", () => startWalkthrough({ force: true }));
+}
+
 function touched() {
-  profile.example = false;
-  if (!viewingShared) el("banner").hidden = true;
   render();
 }
 
@@ -202,7 +205,7 @@ async function adoptSharedRecord() {
   if (!code) return false;
   const shared = await decodeProfile(code, (name) => BY_NAME.has(name));
   if (!shared) return false;
-  profile = { ...structuredClone(EXAMPLE), ...shared, example: false };
+  profile = { ...structuredClone(BLANK), ...shared };
   viewingShared = true;
   el("banner").hidden = false;
   el("banner").className = "hint shared";
@@ -212,11 +215,12 @@ async function adoptSharedRecord() {
   el("mine").addEventListener("click", () => {
     viewingShared = false;
     history.replaceState(null, "", location.pathname + location.search);
-    profile = load() || { ...structuredClone(EXAMPLE), example: true };
-    el("banner").className = "hint";
-    el("banner").textContent = "Loaded with an example record. Change anything and it becomes yours.";
-    el("banner").hidden = !profile.example;
+    profile = load() || structuredClone(BLANK);
+    resetBanner();
     render();
+    /* Nothing of their own to fall back to — start them where a first-time
+       visitor starts. It declines on its own if they have been here before. */
+    startWalkthrough();
   });
   return true;
 }
@@ -589,12 +593,183 @@ sidebar.addEventListener("keydown", (e) => {
   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 });
 
+
+/* ---------------------------------------------------------- walkthrough
+ *
+ * A new visitor lands on an empty list, which is honest but says nothing
+ * about what to do. Four questions fix that: the two transcript numbers,
+ * where you are transferring from, and what you intend to study — exactly
+ * the fields every school's odds turn on. It runs once, is skippable at
+ * every step, and is re-openable from the record pane.
+ */
+
+const WT_STEPS = [
+  {
+    title: "Let's size up your transfer",
+    lede: "Four short questions, then you pick the schools you care about. Every answer lands in your record, where you can change it at any time.",
+    note: "These are estimates built from published admit rates and admitted-transfer GPAs — useful for ranking your list, never a decision from an admissions office.",
+    body: () => "",
+  },
+  {
+    title: "Your transcript",
+    lede: "The two numbers that carry the most weight.",
+    note: "Cumulative GPA across every college course you have taken, and the hours a receiving school would actually accept.",
+    body: () => `
+      <div class="row2">
+        <div class="field"><label for="wtgpa">Cumulative GPA</label>
+          <input type="number" id="wtgpa" min="0" max="4.3" step="0.01" inputmode="decimal" placeholder="e.g. 3.40"></div>
+        <div class="field"><label for="wtcredits">Transferable hours</label>
+          <input type="number" id="wtcredits" min="0" max="200" step="1" inputmode="numeric" placeholder="e.g. 48"></div>
+      </div>`,
+    /* Blank on a first run: a prefilled number is one the visitor can click
+       straight past and then read back as their own. */
+    fill: () => {
+      el("wtgpa").value = saved ? profile.gpa : "";
+      el("wtcredits").value = saved ? profile.credits : "";
+    },
+    read: () => {
+      const g = Number(el("wtgpa").value);
+      if (!el("wtgpa").value.trim() || !(g > 0)) return "Enter your GPA to carry on — it drives every number after this.";
+      if (!el("wtcredits").value.trim()) return "Enter how many hours you have, even if it is a rough count.";
+      profile.gpa = clamp(g, 0, 4.3);
+      profile.credits = Math.round(clamp(Number(el("wtcredits").value) || 0, 0, 200));
+      return null;
+    },
+    focus: "wtgpa",
+  },
+  {
+    title: "Where you are now",
+    lede: "Residency decides which schools price you as in-state, and how many seats they hold for you.",
+    note: "Public universities admit residents at a different rate than everyone else, so this moves the odds on its own.",
+    body: () => `
+      <div class="field"><label for="wtcurtype">You are transferring from</label>
+        <select id="wtcurtype">
+          <option value="cc">A community college</option>
+          <option value="four">A four-year college</option>
+          <option value="sel">A selective four-year college</option>
+          <option value="online">An online or adult-serving college</option>
+        </select></div>
+      <div class="field"><label for="wtstate">Your state of residency</label><select id="wtstate"></select></div>`,
+    fill: () => {
+      el("wtstate").innerHTML = STATES.map((x) => `<option value="${x}">${STATE_NAMES[x] || x}</option>`).join("");
+      el("wtcurtype").value = profile.curtype;
+      el("wtstate").value = profile.state;
+    },
+    read: () => { profile.curtype = el("wtcurtype").value; profile.state = el("wtstate").value; return null; },
+    focus: "wtcurtype",
+  },
+  {
+    title: "Where you are going",
+    lede: "Odds are scored against the applicants to your major at each campus, not the university as a whole.",
+    note: "Not sure yet? Leave it undeclared — you can change it later and every school on your list rescores.",
+    body: () => `
+      <div class="field"><label for="wtmajor">Intended major</label>
+        <input type="text" id="wtmajor" list="majorlist" spellcheck="false" autocomplete="off"></div>
+      <div class="field"><label for="wtterm">Entry term</label>
+        <select id="wtterm"><option value="fall">Fall</option><option value="spring">Spring</option></select></div>`,
+    fill: () => {
+      const m = findMajor(profile.majorId);
+      el("wtmajor").value = m ? m.name : "";
+      el("wtmajor").placeholder = `Search ${MAJORS.length} majors`;
+      el("wtterm").value = profile.term;
+    },
+    read: () => {
+      const m = findMajor(el("wtmajor").value);
+      profile.majorId = m ? m.id : el("wtmajor").value.trim() ? el("wtmajor").value.trim() : "undeclared";
+      profile.term = el("wtterm").value;
+      return null;
+    },
+    focus: "wtmajor",
+  },
+];
+
+const wt = el("wt"), wtScrim = el("wtscrim");
+/* Everything the dialog covers, so it can be put out of reach while it is up. */
+const wtBehind = [document.querySelector(".topbar"), el("sidebar"), document.querySelector(".shell")].filter(Boolean);
+let wtStep = 0, wtReturn = null;
+
+function renderStep() {
+  const step = WT_STEPS[wtStep];
+  el("wtstep").textContent = `Step ${wtStep + 1} of ${WT_STEPS.length}`;
+  el("wtfill").style.width = `${((wtStep + 1) / WT_STEPS.length) * 100}%`;
+  el("wttitle").textContent = step.title;
+  el("wtlede").textContent = step.lede;
+  el("wtbody").innerHTML = step.body();
+  el("wtnote").textContent = step.note;
+  step.fill?.();
+  el("wtback").hidden = wtStep === 0;
+  el("wtnext").textContent = wtStep === 0 ? "Start" : wtStep === WT_STEPS.length - 1 ? "Pick schools" : "Next";
+  el("wterr").hidden = true;
+  const target = step.focus ? el(step.focus) : el("wtnext");
+  requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+}
+
+function startWalkthrough({ force = false } = {}) {
+  if (!force && (saved || viewingShared || seenWalkthrough())) return;
+  wtStep = 0;
+  wtReturn = document.activeElement;
+  wtScrim.hidden = false;
+  wt.hidden = false;
+  wtBehind.forEach((n) => n.setAttribute("inert", ""));
+  requestAnimationFrame(() => { wtScrim.classList.add("open"); wt.classList.add("open"); });
+  renderStep();
+}
+
+function endWalkthrough({ finished } = {}) {
+  try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode — it just asks again */ }
+  wtScrim.classList.remove("open");
+  wt.classList.remove("open");
+  wtBehind.forEach((n) => n.removeAttribute("inert"));
+  const hide = () => { wtScrim.hidden = true; wt.hidden = true; };
+  reduced.matches ? hide() : setTimeout(hide, 320);
+  render();
+  if (finished) {
+    save();
+    setTab("explore", { focus: true });
+    requestAnimationFrame(() => el("q").focus({ preventScroll: true }));
+  } else if (wtReturn instanceof HTMLElement) {
+    wtReturn.focus({ preventScroll: true });
+  }
+}
+
+function seenWalkthrough() {
+  try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return true; }
+}
+
+function advance() {
+  const problem = WT_STEPS[wtStep].read?.();
+  if (problem) {
+    el("wterr").textContent = problem;
+    el("wterr").hidden = false;
+    el(WT_STEPS[wtStep].focus)?.focus();
+    return;
+  }
+  if (wtStep === WT_STEPS.length - 1) { endWalkthrough({ finished: true }); return; }
+  wtStep++;
+  renderStep();
+}
+
+el("wtnext").addEventListener("click", advance);
+el("wtback").addEventListener("click", () => { if (wtStep > 0) { wtStep--; renderStep(); } });
+el("wtskip").addEventListener("click", () => endWalkthrough({ finished: false }));
+wt.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { endWalkthrough({ finished: false }); return; }
+  if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); advance(); return; }
+  if (e.key !== "Tab") return;
+  /* The dialog covers the page, so the tab key stays inside it. */
+  const items = [...wt.querySelectorAll("button:not([hidden]), input, select")].filter((n) => !n.hidden);
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
 /* ------------------------------------------------------------------ wire */
 
 buildStatic();
 initMotion();
+resetBanner();
 render();
-adoptSharedRecord().then((adopted) => { if (adopted) render(); });
+adoptSharedRecord().then((adopted) => { if (adopted) render(); else startWalkthrough(); });
 /* A link that differs only by its hash does not reload the page, so a shared
    record pasted into an open tab has to be picked up here. */
 window.addEventListener("hashchange", () => adoptSharedRecord().then((adopted) => { if (adopted) render(); }));
@@ -628,13 +803,14 @@ for (const id of ["q", "fstate", "fcontrol", "fonline", "fsel", "fsort"]) {
   el(id).addEventListener("input", renderResults);
 }
 
-el("save").addEventListener("click", () => { readForm(); profile.example = false; save(); render(); });
+el("save").addEventListener("click", () => { readForm(); save(); render(); });
 el("reset").addEventListener("click", () => {
   if (!confirm("Clear the saved record and start from an empty list?")) return;
   try { localStorage.removeItem(KEY); } catch {}
-  profile = { ...structuredClone(EXAMPLE), list: [], example: false };
+  profile = structuredClone(BLANK);
   el("savedstate").textContent = "unsaved";
   render();
+  startWalkthrough({ force: true });
 });
 
 el("share").addEventListener("click", copyShareLink);
@@ -691,4 +867,4 @@ function flashExport(word) {
   setTimeout(() => (el("export").textContent = "Export CSV"), 2000);
 }
 
-if (!profile.example) el("savedstate").textContent = "record loaded";
+if (saved) el("savedstate").textContent = "record loaded";

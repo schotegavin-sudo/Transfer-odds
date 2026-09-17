@@ -669,6 +669,74 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .legaldoc b { color: var(--ink); }
 .legaldoc code { font-family: var(--mono); font-size: 0.7188rem; padding: 1px 5px; border-radius: 6px; background: var(--glass-edge); }
 
+/* ---------------------------------------------------------- walkthrough
+ *
+ * The one modal in the app. It is clay rather than glass: you are pushing
+ * through it, not looking past it, and a frosted panel over a frosted page
+ * reads as mush. It rises 10px and settles — no bounce, nothing spinning.
+ */
+
+.wt-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(6, 9, 22, .46);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 260ms cubic-bezier(.32, .72, 0, 1);
+}
+.wt-scrim.open { opacity: 1; }
+
+.wt {
+  position: fixed;
+  inset: 0;
+  z-index: 91;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+.wt-card {
+  pointer-events: auto;
+  width: min(460px, 100%);
+  /* A floor under the card so the four steps do not jump the dialog around
+     as their contents change height; the footer stays pinned to the bottom. */
+  min-height: 342px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-solid);
+  border: 1px solid var(--glass-line);
+  box-shadow: 0 2px 6px rgba(22, 23, 26, .08), 0 40px 70px -32px rgba(22, 23, 26, .5);
+  opacity: 0;
+  transform: translateY(10px) scale(.985);
+  transition: opacity 240ms ease, transform 280ms cubic-bezier(.22, 1, .3, 1);
+}
+.wt.open .wt-card { opacity: 1; transform: none; }
+
+.wt-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wt-count {
+  font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3);
+}
+.wt-rail { height: 3px; margin: 10px 0 16px; border-radius: 2px; background: var(--clay-2); overflow: hidden; }
+.wt-rail i { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width 320ms cubic-bezier(.22, 1, .3, 1); }
+
+.wt-card h2 { margin: 0; font-size: 1.1875rem; line-height: 1.25; }
+.wt-lede { margin: 8px 0 0; font-size: 0.8438rem; line-height: 1.5; color: var(--ink-2); }
+.wt-fields:not(:empty) { margin-top: 14px; }
+.wt-err { margin: 12px 0 0; font-size: 0.7812rem; color: var(--reach); }
+.wt-note { margin: 14px 0 0; font-size: 0.7188rem; line-height: 1.5; color: var(--ink-3); }
+.wt-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: auto; padding-top: 18px; }
+
+@media (max-width: 420px) {
+  .wt-foot .btn { flex: 1; }
+}
+
 .linky {
   border: 0; background: none; padding: 0; cursor: pointer;
   font: inherit; color: var(--ink-2);
@@ -678,6 +746,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition: none; }
+  .wt-card { transition: none; }
 }
 
 /* ----------------------------------------------------- reduced motion */

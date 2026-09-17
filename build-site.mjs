@@ -166,10 +166,17 @@ self.addEventListener("fetch", (e) => {
 /* A single file that opens by double-clicking, with no server at all.
    ES modules refuse to load over file://, so the four modules are concatenated
    into one classic script in dependency order and the stylesheet is inlined. */
-const inline = (name) => readFileSync(join(here, name), "utf8")
-  .replace(/^import\s+[^;]*?;\s*$/gms, "")        // drop the import statements
-  .replace(/^export\s+(const|let|function|class)\b/gm, "$1")
-  .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, "");
+const inline = (name) => {
+  const src = readFileSync(join(here, name), "utf8")
+    .replace(/^import\s+[^;]*?;\s*$/gms, "")                                    // drop the import statements
+    .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, "")                             // drop re-export lists
+    .replace(/^export\s+(?=(?:async\s+)?(?:const|let|var|function|class)\b)/gm, ""); // unwrap declarations
+  /* A missed keyword throws at parse time inside a <script> tag, which kills
+     the whole offline file silently. Catch it here, where it is a build error. */
+  const left = src.match(/^\s*(?:import|export)\b.*/m);
+  if (left) throw new Error(`${name}: module syntax survived inlining — ${left[0].trim()}`);
+  return src;
+};
 
 const inlineFonts = existsSync(join(site, "fonts.css"))
   ? readFileSync(join(site, "fonts.css"), "utf8")
