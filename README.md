@@ -106,6 +106,54 @@ Every row carries a confidence marker: `P` for a published transfer admit rate,
 planning estimates. Verify against a school's Common Data Set, section D, before
 relying on any of them.
 
+## Programs
+
+The odds model answers "can I get in". The Programs pane answers "is the
+program worth getting into" — and it answers it with measured federal data
+rather than a ranking, because no reusable ranking of program quality exists.
+The magazine tables are copyrighted opinion surveys, and a quality score
+invented here would be exactly the kind of made-up number the rest of this
+project refuses to print.
+
+So `programs.js` reports four things per school per major and lets you sort on
+any of them:
+
+| | what it is | what it is not |
+| --- | --- | --- |
+| **Size** | bachelor's degrees the school awarded in the field last year | quality — but it does separate a staffed department from a line in the catalogue |
+| **Focus** | degrees in this field per degree the campus awards, against the same ratio nationally | prestige — Embry-Riddle is 141× the national share in aviation, which is a fact about the campus, not a verdict |
+| **Outcome** | median earnings one year out, against the national median for the same field | a measure of teaching — it reads who enrolled as much as what was taught |
+| **Burden** | median debt at graduation per dollar of first-year earnings | a full cost picture — it covers federal loans for aided students |
+
+Earnings are nominal, so a school in an expensive city sits higher for that
+reason alone. Ranked on the national median, "the best nursing programs" comes
+out as a list of California, which is a fact about nurses' wages rather than
+about schools. Each field therefore also carries **its own state's median**, and
+the pane can rank against that instead — the comparison that is about the school
+rather than the state. Schools that teach primarily online are left out of that
+comparison, since their state is where they are incorporated and not where their
+graduates take jobs.
+
+Roughly a third of programs publish no earnings at all: the Department
+suppresses any figure drawn from too few graduates to report without
+identifying them. Those carry a size and an explicit *not published* — never an
+estimate.
+
+The table is 370 KB, which nobody should pay for on a page they may never open,
+so it is fetched the first time the Programs pane is opened or a school card is
+expanded. It is left out of the service worker's precache for the same reason.
+
+Regenerate it when a new Scorecard release lands:
+
+```
+node tools/build-programs.mjs Most-Recent-Cohorts-Field-of-Study.csv 06102026 HD2023.csv
+```
+
+The mapping from this project's 154 majors to federal CIP fields lives in
+`tools/cip-map.json`. Seven majors have no bachelor-level federal field of their
+own — undeclared, honors, and five trades taught below the bachelor's level —
+and the pane says so rather than inventing a category for them.
+
 ## Deadlines
 
 A wrong deadline is worse than no deadline, so `deadlines.js` keeps two kinds of
@@ -162,6 +210,12 @@ from overall selectivity. The weights on the file fields are judgment calibrated
 against those rates, not fitted to admission outcomes, because no public dataset
 publishes transfer decisions at the applicant level. Verify any school that
 matters against its Common Data Set, section D.
+
+The program figures are the exception: they are measured, not modelled. Degrees
+awarded, graduate earnings and graduate debt come straight from the College
+Scorecard field-of-study file, and a figure the Department suppressed is carried
+as absent rather than filled in. What they cannot tell you is how much of a
+program's earnings advantage was taught and how much walked in the door.
 
 The record is kept in the browser's local storage only.
 

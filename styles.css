@@ -262,6 +262,9 @@ a { color: var(--accent); }
 
 
 .pane { animation: pane-in var(--settle) both; }
+/* The top bar is sticky, so a pane scrolled to the top of the viewport would
+   put its own heading underneath it. */
+.pane { scroll-margin-top: 96px; }
 @keyframes pane-in { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
 
 /* ----------------------------------------------------------- record rail */
@@ -528,8 +531,9 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .result:hover { background: var(--glass-edge); }
 .result .name { font-size: 0.8438rem; font-weight: 600; }
 .result .meta { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); margin-top: 2px; }
-.result .odds { text-align: right; font-family: var(--mono); font-weight: 700; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
-.result .odds small { display: block; font-size: 0.5312rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 500; }
+/* Shared by the search results and the program rankings. */
+.odds { text-align: right; font-family: var(--mono); font-weight: 700; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.odds small { display: block; font-size: 0.5312rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 500; }
 .empty { padding: 26px 16px; color: var(--ink-3); font-size: 0.8125rem; text-align: center; }
 
 /* -------------------------------------------------------------- method */
@@ -735,6 +739,73 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 
 @media (max-width: 420px) {
   .wt-foot .btn { flex: 1; }
+}
+
+/* ------------------------------------------------------------- programs
+ *
+ * A ranked list whose rows carry four numbers each. The rank and the headline
+ * figure are the only things sized to be read at a glance; the supporting
+ * facts sit underneath at reading size, because the whole point of the pane is
+ * that no single number decides anything.
+ */
+
+/* The record rail supplies its own padding; this pane is edge to edge, so its
+   heading needs the gutter put back. */
+#pane-programs > .rail-head { padding: 18px 18px 0; }
+/* Below this width the pane reaches the edge of the screen, where the drawer
+   handle is, so the heading row keeps clear of it. */
+@media (max-width: 1000px) {
+  #pane-programs > .rail-head { padding-right: 62px; }
+}
+
+.fieldcard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 18px 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--clay-2);
+}
+.fc-main { flex: 1 1 260px; min-width: 0; }
+.fc-main b { display: block; font-size: 0.9375rem; }
+.fc-main span { display: block; margin-top: 3px; font-size: 0.7188rem; line-height: 1.5; color: var(--ink-2); }
+.fc-main i { font-style: normal; color: var(--ink); }
+.fc-num { text-align: right; }
+.fc-num b { display: block; font-family: var(--mono); font-size: 1.125rem; font-weight: 600; }
+.fc-num span { font-size: 0.6875rem; color: var(--ink-3); }
+
+.proglist { list-style: none; margin: 8px 0 0; padding: 0 12px 12px; }
+.progrow {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 6px;
+  border-top: 1px solid var(--glass-edge);
+}
+.progrow:first-child { border-top: 0; }
+.progrow .rank {
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 600;
+  color: var(--ink-3); text-align: right;
+}
+.pr-main { min-width: 0; }
+.pr-main .name { font-weight: 600; font-size: 0.8438rem; }
+.pr-main .meta { font-size: 0.6875rem; color: var(--ink-3); margin-top: 1px; }
+.pr-bits { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; }
+.pr-bits span { font-size: 0.6875rem; line-height: 1.45; color: var(--ink-2); }
+.pr-bits span + span::before { content: "·"; margin-right: 10px; color: var(--ink-3); }
+.pr-lead { text-align: right; min-width: 7rem; padding-left: 8px; }
+.pr-lead b { display: block; font-family: var(--mono); font-size: 1rem; font-weight: 600; }
+.pr-lead small { font-size: 0.625rem; color: var(--ink-3); }
+.pr-odds { display: flex; align-items: center; gap: 12px; padding-left: 14px; border-left: 1px solid var(--glass-edge); }
+
+@media (max-width: 720px) {
+  .progrow { grid-template-columns: 1.5rem 1fr auto; row-gap: 8px; }
+  .pr-odds { grid-column: 2 / -1; justify-content: flex-end; }
+  .pr-lead { min-width: 0; }
 }
 
 .linky {

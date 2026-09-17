@@ -5,6 +5,7 @@ import {
 import { searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks } from "./deadlines.js";
 import { shareLink, decodeProfile, readHash } from "./share.js";
+import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -78,6 +79,216 @@ function save() {
   }
 }
 
+
+/* -------------------------------------------------------------- programs
+ *
+ * The program table is 370 KB and most visits never open it, so it is fetched
+ * the first time something on screen needs it: the Programs pane, or a school
+ * card being expanded. Until then every view renders without it and says so
+ * rather than sitting blank.
+ */
+
+let PROG = null;
+let progLoading = null;
+/* The pane follows the record's major until you type another one into it, at
+   which point the choice is yours and stops being overwritten. */
+let programMajorPinned = false;
+
+function ensurePrograms() {
+  if (PROG) return Promise.resolve(PROG);
+  if (progLoading) return progLoading;
+  el("progstate").textContent = "loading…";
+  progLoading = loadPrograms().then((p) => {
+    PROG = p;
+    el("progstate").textContent = `${p.programCount.toLocaleString()} programs`;
+    render();
+    return p;
+  }).catch(() => {
+    el("progstate").textContent = "unavailable";
+    progLoading = null;
+    return null;
+  });
+  return progLoading;
+}
+
+const money = (v) => (v === null || v === undefined ? "—" : "$" + Math.round(v).toLocaleString());
+const mult = (v) => (v === null || v === undefined ? "—" : v.toFixed(2) + "×");
+
+/* One shared vocabulary for the comparison numbers, so a figure means the same
+   thing on a school card as it does in the ranked list. */
+function indexWord(v) {
+  if (v === null) return { word: "not published", key: "none" };
+  if (v >= 1.25) return { word: "well above", key: "likely" };
+  if (v >= 1.05) return { word: "above", key: "likely" };
+  if (v >= 0.95) return { word: "about level with", key: "target" };
+  if (v >= 0.8) return { word: "below", key: "reach" };
+  return { word: "well below", key: "reach" };
+}
+
+function syncProgramMajor() {
+  if (programMajorPinned) return;
+  const m = findMajor(profile.majorId);
+  el("pmajor").value = m ? m.name : "";
+}
+
+function progMajorId() {
+  const typed = el("pmajor").value.trim();
+  const m = findMajor(typed);
+  return m ? m.id : profile.majorId;
+}
+
+function renderPrograms() {
+  const node = el("progresults"), head = el("profield");
+  syncProgramMajor();
+  if (!PROG) {
+    head.innerHTML = "";
+    node.innerHTML = `<li class="empty glass" style="padding:28px 20px">Loading the federal program tables…</li>`;
+    return;
+  }
+
+  const majorId = progMajorId();
+  const major = findMajor(majorId);
+  const data = PROG.major(majorId);
+  const sortKey = el("psort").value || "outcome";
+  const sort = PROGRAM_SORTS[sortKey];
+  el("psortnote").textContent = sort.note;
+
+  if (!data) {
+    head.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:0 18px">
+      <b>${esc(major ? major.name : majorId)}</b> has no bachelor's field of its own in the federal data, so there is
+      nothing here to rank. Majors like this are usually recorded under a broader field, or are a pathway rather than
+      a degree.</p>`;
+    node.innerHTML = "";
+    return;
+  }
+
+  const minAwards = Number(el("pmin").value);
+  const fstate = el("pstate").value;
+  const scope = el("pscope").value;
+
+  let rows = PROG.schoolsForMajor(majorId, { minAwards, earningsOnly: sort.needsEarnings });
+  if (sort.needsState) rows = rows.filter((p) => p.localIndex !== null);
+  if (fstate) rows = rows.filter((p) => p.school.state === fstate);
+  if (scope === "list") rows = rows.filter((p) => profile.list.includes(p.school.name));
+  if (scope === "odds") rows = rows.filter((p) => score(p.school, profile, false).prob >= 0.2);
+  rows = [...rows].sort(sort.cmp);
+
+  head.innerHTML = `<div class="fieldcard clay">
+    <div class="fc-main">
+      <b>${esc(major ? major.name : majorId)}</b>
+      <span>${data.natAwards.toLocaleString()} bachelor's degrees a year nationally${
+        data.fields.length > 1
+          ? `, recorded under ${data.fields.length} federal fields — ${data.fields.map((f) => esc(f.title)).join(", ")}`
+          : `, federal field <i>${esc(data.fields[0].title)}</i>`}.</span>
+    </div>
+    <div class="fc-num">
+      <b>${money(data.natEarn)}</b>
+      <span>national median, one year out</span>
+    </div>
+  </div>`;
+
+  if (rows.length === 0) {
+    node.innerHTML = `<li class="empty glass" style="padding:28px 20px">Nothing matches those filters. ${
+      sort.needsEarnings ? "This ranking needs published earnings, which the Department suppresses for small programs — try a smaller minimum size, or rank by program size instead." : "Try a smaller minimum size."}</li>`;
+    return;
+  }
+
+  const shown = rows.slice(0, 100);
+  node.innerHTML = shown.map((p, i) => progRow(p, i, sortKey)).join("")
+    + (rows.length > shown.length ? `<li class="empty">${rows.length - shown.length} more match. Narrow it down to see them.</li>` : "");
+
+  node.querySelectorAll("[data-add]").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (profile.list.includes(b.dataset.add)) return;
+      profile.list = [...profile.list, b.dataset.add];
+      touched();
+    }));
+}
+
+function progRow(p, i, sortKey) {
+  const s = p.school;
+  const r = score(s, profile, false);
+  const added = profile.list.includes(s.name);
+  const lead =
+    sortKey === "size" ? { v: p.awards.toLocaleString(), u: "degrees a year" }
+    : sortKey === "focus" ? { v: p.focus ? p.focus.toFixed(1) + "×" : "—", u: "the national share" }
+    : sortKey === "burden" ? { v: p.burden ? p.burden.toFixed(2) : "—", u: "debt per dollar earned" }
+    : sortKey === "local" ? { v: mult(p.localIndex), u: "of the " + s.state + " median" }
+    : sortKey === "earnings" ? { v: money(p.earn1), u: "one year out" }
+    : { v: mult(p.index), u: "of the national median" };
+
+  const bits = [];
+  bits.push(`${p.awards.toLocaleString()} degrees a year`);
+  if (p.earn1) bits.push(`${money(p.earn1)} median`);
+  if (p.index) bits.push(`${indexWord(p.index).word} the national median`);
+  if (p.localIndex) bits.push(`${indexWord(p.localIndex).word} the ${s.state} median for the field`);
+  if (p.focus && p.focus >= 2) bits.push(`${p.focus.toFixed(1)}× as central to this campus as to the average one`);
+  if (p.burden) bits.push(`${p.burden.toFixed(2)} debt per dollar of first-year pay`);
+  if (!p.earn1) bits.push(`earnings not published — the graduating cohort is too small to report safely`);
+  if (p.split) bits.push(`the money covers the ${p.sourceAwards.toLocaleString()} in ${esc(p.source.title)}`);
+
+  return `<li class="progrow">
+    <span class="rank">${i + 1}</span>
+    <div class="pr-main">
+      <div class="name">${esc(s.name)}</div>
+      <div class="meta">${s.state} · ${controlOf(s)}${s.online === 2 ? " · online" : ""}</div>
+      <div class="pr-bits">${bits.map((b) => `<span>${b}</span>`).join("")}</div>
+    </div>
+    <div class="pr-lead"><b>${lead.v}</b><small>${esc(lead.u)}</small></div>
+    <div class="pr-odds">
+      <div class="odds t-${r.tier.key}">${pct(r.prob)}%<small>your odds</small></div>
+      <button type="button" class="btn sm" data-add="${esc(s.name)}" ${added ? "disabled" : ""}>${added ? "added" : "Add"}</button>
+    </div>
+  </li>`;
+}
+
+/* The program block inside a school card: what this campus does in your major,
+   and what it does best overall. */
+function programSection(s, majorId) {
+  if (!PROG) return `<h4>Program strength</h4><p class="sources"><i>loading the federal program tables…</i></p>`;
+  const p = PROG.at(s, majorId);
+  const major = findMajor(majorId);
+  if (!p) {
+    const strong = PROG.strongestAt(s).slice(0, 3);
+    return `<h4>Program strength</h4>
+      <p style="margin:0 0 8px;font-size:0.75rem;color:var(--ink-2);max-width:60ch">This school reported no bachelor's degrees in ${
+        esc(major ? major.name : "your major")} to the Department of Education last year, so either it does not run the
+        program or it records it under a field this table does not reach.</p>
+      ${strong.length ? `<p class="sources" style="display:block;font-size:0.72rem;color:var(--ink-3)">Its graduates earn most against their field in: ${
+        strong.map((x) => `${esc(findMajor(x.majorId)?.name || x.majorId)} (${mult(x.index)})`).join(", ")}.</p>` : ""}`;
+  }
+
+  const ranked = PROG.schoolsForMajor(majorId, { minAwards: 0, earningsOnly: true }).sort(PROGRAM_SORTS.outcome.cmp);
+  const place = p.index === null ? null : ranked.findIndex((x) => x.school.name === s.name) + 1;
+
+  return `<h4>Program strength</h4>
+    <table class="ledger"><tbody>
+      <tr><td class="g">Size of the program</td><td class="d">${p.awards.toLocaleString()}</td>
+        <td class="n">bachelor's degrees awarded here last year in ${esc(p.major.fields.map((f) => f.title).join(" and "))}${
+          p.focus ? `, which is ${p.focus.toFixed(1)}× as large a share of this campus as the field is nationally` : ""}</td></tr>
+      ${p.earn1 ? `
+      <tr><td class="g">Earnings, one year out</td><td class="d">${money(p.earn1)}</td>
+        <td class="n">median for this program's graduates, ${indexWord(p.index).word} the ${money(p.major.natEarn)} national median for the field${
+          p.split ? ` — measured on the ${p.sourceAwards.toLocaleString()} in ${esc(p.source.title)}` : ""}</td></tr>
+      ${p.localIndex ? `
+      <tr><td class="g">Against ${s.state}</td><td class="d">${mult(p.localIndex)}</td>
+        <td class="n">the same figure against the ${money(p.stateEarn)} median for this field in ${s.state}, across ${p.statePrograms} programs — the comparison that is about the school rather than the state</td></tr>` : ""}
+      ${p.earn2 ? `
+      <tr><td class="g">Two years out</td><td class="d">${money(p.earn2)}</td>
+        <td class="n">${p.earn2 > p.earn1 ? `up ${Math.round(((p.earn2 - p.earn1) / p.earn1) * 100)}%` : "little changed"} from the first year</td></tr>` : ""}
+      ${p.debt ? `
+      <tr><td class="g">Debt at graduation</td><td class="d">${money(p.debt)}</td>
+        <td class="n">median federal loan debt for completers, ${p.burden.toFixed(2)} for every dollar of first-year pay${
+          p.burden <= 1 ? " — generally considered manageable" : " — above the one-to-one line usually treated as the limit"}</td></tr>` : ""}
+      ${place ? `
+      <tr><td class="g">Among all ${SCHOOLS.length} schools here</td><td class="d">#${place}</td>
+        <td class="n">of the ${ranked.length} in this database that publish earnings for this field</td></tr>` : ""}
+      ` : `
+      <tr><td class="g">Earnings</td><td class="d">—</td>
+        <td class="n">not published. The Department suppresses any figure drawn from too few graduates to report without identifying them, so this is a statement about the cohort's size, not its outcome</td></tr>`}
+    </tbody></table>`;
+}
+
 /* ---------------------------------------------------------------- utils */
 
 const el = (id) => document.getElementById(id);
@@ -104,6 +315,9 @@ function buildStatic() {
   const opts = STATES.map((s) => `<option value="${s}">${STATE_NAMES[s] || s}</option>`).join("");
   el("state").innerHTML = opts;
   el("fstate").innerHTML = `<option value="">All states</option>` + opts;
+  el("pstate").innerHTML = `<option value="">All states</option>` + opts;
+  el("psort").innerHTML = Object.entries(PROGRAM_SORTS)
+    .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
   el("majorlist").innerHTML = MAJOR_GROUPS.map((g) =>
     MAJORS.filter((m) => m.group === g).map((m) => `<option value="${esc(m.name)}">${esc(g)}</option>`).join("")).join("");
 
@@ -246,6 +460,7 @@ function render() {
   syncForm();
   renderList();
   renderResults();
+  renderPrograms();
 }
 
 function renderList() {
@@ -264,7 +479,15 @@ function renderList() {
     el("cards").innerHTML = `<p class="empty glass" style="padding:40px 20px">No schools yet. Open <b>Explore</b> and add a few.</p>`;
     return;
   }
+  /* An expanded card stays expanded when the list is redrawn — a keystroke in
+     the record should not close what you were reading. */
+  const wasOpen = new Set([...el("cards").querySelectorAll("details[open]")].map((d) => d.dataset.school));
   el("cards").innerHTML = results.map((r, i) => cardHtml(r, i, fresh)).join("");
+  el("cards").querySelectorAll("details").forEach((d) => {
+    if (wasOpen.has(d.dataset.school)) d.open = true;
+    /* The program tables are only worth fetching once somebody opens a card. */
+    d.addEventListener("toggle", () => { if (d.open) ensurePrograms(); });
+  });
   el("cards").querySelectorAll("[data-rm]").forEach((b) =>
     b.addEventListener("click", (e) => {
       e.preventDefault();
@@ -365,7 +588,7 @@ function cardHtml(r, i, fresh) {
         <tr><td class="g">Even odds at</td><td class="d">${r.evenOdds > 4.3 ? "—" : r.evenOdds.toFixed(2)}</td><td class="n">${r.evenOdds > 4.3 ? "no GPA alone gets this to a coin flip; the rest of the file has to move" : "the GPA that would make this a coin flip, everything else unchanged"}</td></tr>
       </tbody></table>`;
 
-  return `<details class="card glass${fresh ? " enter" : ""}" style="--i:${i}">
+  return `<details class="card glass${fresh ? " enter" : ""}" style="--i:${i}" data-school="${esc(s.name)}">
     <summary>
       <div>
         <div class="name">${esc(s.name)}</div>
@@ -389,6 +612,8 @@ function cardHtml(r, i, fresh) {
       <h4>Check with the school</h4>
       <p class="sources">${verifyLinks(s).map((l) =>
         `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${esc(l.label)}<small>${esc(l.note)}</small></a>`).join("")}</p>
+
+      ${programSection(s, profile.majorId)}
 
       <h4>The competition</h4>
       ${competition}
@@ -517,7 +742,7 @@ function initMotion() {
  * keyboard as well as the pointer.
  */
 
-const PANES = { record: "pane-record", list: "pane-list", explore: "pane-explore", method: "pane-method", legal: "pane-legal" };
+const PANES = { record: "pane-record", list: "pane-list", explore: "pane-explore", programs: "pane-programs", method: "pane-method", legal: "pane-legal" };
 let currentTab = "list";
 
 function setTab(name, { animate = true, focus = false } = {}) {
@@ -545,6 +770,7 @@ function setTab(name, { animate = true, focus = false } = {}) {
   }
   document.querySelectorAll(".navitem").forEach((b) =>
     b.setAttribute("aria-current", b.dataset.tab === name ? "page" : "false"));
+  if (name === "programs") ensurePrograms();
   if (focus) {
     const pane = el(PANES[name]);
     pane.setAttribute("tabindex", "-1");
@@ -774,6 +1000,7 @@ adoptSharedRecord().then((adopted) => { if (adopted) render(); else startWalkthr
    record pasted into an open tab has to be picked up here. */
 window.addEventListener("hashchange", () => adoptSharedRecord().then((adopted) => { if (adopted) render(); }));
 setTab("list", { animate: false });
+syncProgramMajor();
 window.addEventListener("resize", () => setTab(currentTab, { animate: false }));
 
 document.querySelectorAll(".navitem").forEach((b) =>
@@ -802,6 +1029,14 @@ el("major").addEventListener("blur", () => {
 for (const id of ["q", "fstate", "fcontrol", "fonline", "fsel", "fsort"]) {
   el(id).addEventListener("input", renderResults);
 }
+el("pmajor").addEventListener("input", () => { programMajorPinned = true; });
+for (const id of ["pmajor", "psort", "pstate", "pmin", "pscope"]) {
+  el(id).addEventListener("input", () => { ensurePrograms(); renderPrograms(); });
+}
+el("pmajor").addEventListener("blur", () => {
+  const m = findMajor(el("pmajor").value);
+  if (m) el("pmajor").value = m.name;
+});
 
 el("save").addEventListener("click", () => { readForm(); save(); render(); });
 el("reset").addEventListener("click", () => {

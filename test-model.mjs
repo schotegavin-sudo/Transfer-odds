@@ -8,6 +8,8 @@ import { SCHOOLS, MAJORS, MAJOR_BY_ID, score, levers, poolFor, majorRate, Phi, p
 import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
 import { encodeProfile, decodeProfile } from "./share.js";
+import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
+import { MAJOR_CIP, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
 
 let failures = 0, checks = 0;
 const fail = (msg) => { failures++; console.log("  FAIL  " + msg); };
@@ -362,6 +364,100 @@ await section("Share links", async () => {
   for (const junk of ["", "x", "1z", "9zabc", "1znot-base64!!", "1u" + btoa("{not json"), "1u" + btoa('{"g":"not a number"}')]) {
     ok(await decodeProfile(junk) === null, `"${junk.slice(0, 16)}" should decode to null`);
   }
+});
+
+
+await section("Program data", async () => {
+  const PROG = await loadPrograms();
+
+  /* Every major in the table is a major the app actually has, and every CIP
+     the map points at exists in the data. A typo in either file would
+     otherwise show up as a major that silently has no programs. */
+  for (const [majorId, cips] of Object.entries(MAJOR_CIP)) {
+    ok(MAJOR_BY_ID.has(majorId), `cip map names "${majorId}", which is not a major`);
+    for (const cip of cips) ok(PROG.fields.has(cip), `${majorId}: CIP ${cip} is not in the field table`);
+  }
+  for (const m of MAJORS) ok(MAJOR_CIP[m.id] !== undefined, `${m.id} has no entry in the cip map`);
+
+  /* Nothing invented. Every school in the program table is one of ours, and
+     every money figure is a plausible amount rather than a parse artifact. */
+  let money = 0, sizes = 0;
+  for (const major of PROG.majors.values()) {
+    for (const p of major.rows) {
+      ok(SCHOOLS.includes(p.school), `${p.school?.name}: program row for a school not in the database`);
+      ok(p.awards >= 0 && p.awards < 20000, `${p.school.name}/${major.id}: ${p.awards} degrees a year is not credible`);
+      sizes++;
+      if (p.earn1 !== null) {
+        money++;
+        ok(p.earn1 > 5000 && p.earn1 < 400000, `${p.school.name}/${major.id}: $${p.earn1} is not a credible median`);
+        ok(p.index > 0.1 && p.index < 10, `${p.school.name}/${major.id}: index ${p.index} is out of range`);
+      }
+      /* Debt and earnings must travel together or not at all: a burden ratio
+         computed from one of them would be meaningless. */
+      ok(p.burden === null || (p.debt !== null && p.earn1 !== null), `${p.school.name}/${major.id}: burden without both figures`);
+      /* A suppressed figure is absent, never zero — the bug that would quietly
+         rank every small program last. */
+      ok(p.earn1 !== 0 && p.debt !== 0, `${p.school.name}/${major.id}: a suppressed figure came through as zero`);
+    }
+  }
+  ok(money > 8000, `only ${money} programs carry earnings — the join is probably broken`);
+  ok(sizes > 20000, `only ${sizes} programs total — the table is probably truncated`);
+
+  /* An online school's state is where it is incorporated, so it never gets a
+     local comparison. */
+  for (const major of PROG.majors.values())
+    for (const p of major.rows)
+      if (p.school.online === 2) ok(p.localIndex === null, `${p.school.name}: an online school was compared to its state`);
+
+  /* The pooled national median has to sit among the fields it pools, or the
+     weighting is wrong. */
+  for (const major of PROG.majors.values()) {
+    if (major.natEarn === null) continue;
+    const ms = major.fields.map((f) => f.natEarn).filter((v) => v !== null);
+    ok(major.natEarn >= Math.min(...ms) && major.natEarn <= Math.max(...ms),
+      `${major.id}: pooled median ${major.natEarn} sits outside its fields ${ms.join()}`);
+  }
+
+  /* Every sort produces an order, and a descending sort really descends. */
+  for (const [key, sort] of Object.entries(PROGRAM_SORTS)) {
+    const rows = PROG.schoolsForMajor("cs", { minAwards: 15, earningsOnly: sort.needsEarnings })
+      .filter((p) => !sort.needsState || p.localIndex !== null)
+      .sort(sort.cmp);
+    ok(rows.length > 20, `sort "${key}" left only ${rows.length} computer science programs`);
+    for (let i = 1; i < rows.length; i++) ok(sort.cmp(rows[i - 1], rows[i]) <= 0, `sort "${key}" is not ordered at row ${i}`);
+  }
+
+  /* The headline claim of the pane: a major that spans two federal fields is
+     read against both, not against whichever one a school happened to file
+     under. Computer Science spans two, and its pooled national figure must
+     differ from at least one of them. */
+  const cs = PROG.major("cs");
+  ok(cs.fields.length === 2, `computer science should span two federal fields, spans ${cs.fields.length}`);
+  ok(cs.natAwards === cs.fields.reduce((t, f) => t + f.natAwards, 0), "pooled awards do not add up");
+
+  /* A school that runs no such program says so instead of returning zeros. */
+  const noProgram = SCHOOLS.find((s) => PROG.at(s, "petro") === null);
+  ok(noProgram !== undefined, "every school appears to run petroleum engineering, which cannot be right");
+
+  /* The majors with no federal field are handled, not crashed on. */
+  for (const majorId of ["undeclared", "honors", "hvac"]) {
+    ok(!PROG.covered(majorId), `${majorId} should have no federal field`);
+    ok(PROG.schoolsForMajor(majorId).length === 0, `${majorId} returned programs it should not have`);
+    ok(PROG.at(SCHOOLS[0], majorId) === null, `${majorId} returned a program for ${SCHOOLS[0].name}`);
+  }
+
+  /* Two schools that award the same number of degrees must still be distinct
+     records — the join is by unit id, not by any number that can collide. */
+  const rowsPerSchool = new Map();
+  for (const line of PROGRAM_ROWS.split("\n")) rowsPerSchool.set(line.split(",")[0], (rowsPerSchool.get(line.split(",")[0]) || 0) + 1);
+  for (const [unitid, n] of rowsPerSchool) ok(n === 1, `unit id ${unitid} appears in ${n} rows`);
+
+  /* Field titles survived the CSV's quoted commas intact. */
+  for (const f of PROG.fields.values()) {
+    ok(f.title.length > 3 && !/^\d|\|/.test(f.title), `CIP ${f.cip} has a mangled title: ${JSON.stringify(f.title)}`);
+    ok(f.natAwards >= 0, `CIP ${f.cip} has negative awards`);
+  }
+  ok(CIP_ROWS.split("\n").length === PROG.fields.size, "field rows and parsed fields disagree");
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

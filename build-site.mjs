@@ -22,7 +22,7 @@ const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/tr
 const TITLE = "Transfer Odds — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
-const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js"];
+const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js"];
 const SITE_FILES = ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "og.png", "fonts.css", "legal.css"];
 
 rmSync(dist, { recursive: true, force: true });
@@ -134,7 +134,9 @@ writeFileSync(join(dist, "manifest.webmanifest"), JSON.stringify({
 /* Network-first for the page so a deploy is picked up immediately;
    cache-first for the modules, which are versioned with the build. */
 writeFileSync(join(dist, "sw.js"), `const CACHE = "transfer-odds-${version}";
-const ASSETS = ${JSON.stringify(["./", "index.html", ...shipped, "manifest.webmanifest"])};
+/* programs.js is deliberately not precached: it is 370 KB that most visits
+   never ask for, and the fetch handler caches it the first time one does. */
+const ASSETS = ${JSON.stringify(["./", "index.html", ...shipped.filter((f) => f !== "programs.js"), "manifest.webmanifest"])};
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -197,7 +199,11 @@ const singleFile = head
     .replace(/<title>[^<]*<\/title>/, "<title>Transfer Odds (offline copy)</title>")
   + body.replace(/<script type="module"[\s\S]*?<\/script>/, "")
   + `\n<script>\n(function () {\n"use strict";\n`
-  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "app.js"].map(inline).join("\n")
+  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "programs.js"].map(inline).join("\n")
+  /* There is no second file to fetch here, so the program tables are handed to
+     the loader directly instead of being imported. */
+  + `\nglobalThis.__PROGRAM_DATA__ = { CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP };\n`
+  + ["program-model.js", "app.js"].map(inline).join("\n")
   + `\n})();\n</script>\n</body>\n</html>\n`;
 
 writeFileSync(join(dist, "transfer-odds-offline.html"), singleFile);

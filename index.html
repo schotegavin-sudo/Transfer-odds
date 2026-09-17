@@ -42,6 +42,10 @@
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg></span>
         <span class="navtext"><b>Explore</b><small>Search all 588 schools</small></span>
       </button>
+      <button type="button" class="navitem" data-tab="programs" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 3 8.5l9 4.5 9-4.5z"/><path d="M7 11v4.5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V11"/><path d="M21 8.5V14"/></svg></span>
+        <span class="navtext"><b>Programs</b><small>Who is strongest in your major</small></span>
+      </button>
       <button type="button" class="navitem" data-tab="method" aria-current="false">
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"/><path d="M4 16c4 0 4-9 8-9s4 6 8 6"/></svg></span>
         <span class="navtext"><b>Method</b><small>How the number is produced</small></span>
@@ -235,6 +239,39 @@
       <ul class="results" id="results"></ul>
     </section>
 
+    <section class="pane glass" id="pane-programs" role="tabpanel" aria-label="Programs" hidden>
+      <div class="rail-head">
+        <h2>Programs by major</h2>
+        <span class="saved" id="progstate">not loaded</span>
+      </div>
+      <p class="hint" style="padding:0 18px 0">
+        There is no public ranking of program quality, so this ranks nothing on reputation. Every figure below is
+        reported by the school to the Department of Education or measured from federal tax records.
+        <button type="button" class="linky" data-tab="method">How to read it</button>
+      </p>
+
+      <div class="tools">
+        <input type="text" id="pmajor" list="majorlist" aria-label="Major" spellcheck="false" autocomplete="off" placeholder="Pick a major">
+        <select id="psort" aria-label="Rank programs by"></select>
+        <select id="pstate" aria-label="Filter by state"></select>
+        <select id="pmin" aria-label="Minimum program size">
+          <option value="15">15+ degrees a year</option>
+          <option value="50">50+ a year</option>
+          <option value="150">150+ a year</option>
+          <option value="0">Any size</option>
+        </select>
+        <select id="pscope" aria-label="Which schools to include">
+          <option value="all">Every school</option>
+          <option value="list">Only my list</option>
+          <option value="odds">Only where I have a real shot</option>
+        </select>
+      </div>
+
+      <p class="majornote" id="psortnote" style="padding:0 18px"></p>
+      <div id="profield"></div>
+      <ol class="proglist" id="progresults"></ol>
+    </section>
+
     <section class="pane glass method" id="pane-method" role="tabpanel" aria-label="Method" hidden>
       <h2>How the number is produced</h2>
       <div class="method-grid">
@@ -247,6 +284,9 @@
         <div>
           <h3>Where your file lands</h3>
           <p>Your GPA and your file are placed inside that pool as a percentile, and admission sits at the percentile the seats run out. Everything on the file is measured against the typical applicant there, not against an empty page: being in-state at a state flagship is worth nothing when most of the pool is in-state too. Each field contributes exactly one line, so nothing is counted twice.</p>
+          <h3>Programs are reported, not ranked</h3>
+          <p>The Programs pane ranks nothing on reputation, because no reusable ranking of program quality exists to draw on. It reports four measured things and lets you sort on each: how many degrees a school awards in the field, how central the field is to that campus, what its graduates earn against everyone who finished the same field, and what they owe against what they earn. Earnings come from federal tax records, so they are counted rather than surveyed.</p>
+          <p class="caution">Earnings read who enrolled as much as what was taught, and they are nominal — a school in an expensive city sits higher for that reason alone, which is why every field also carries its own state's median. Roughly a third of programs publish no earnings at all: the Department suppresses any figure drawn from too few graduates to report safely, and those show a size and nothing else rather than an estimate.</p>
           <h3>Read it as a bracket</h3>
           <p class="caution"><code>P</code> marks a published transfer admit rate, <code>E</code> one estimated from selectivity. The model does not know which majors a campus offers, or this year's department caps. Admission turns on things no calculator sees. Confirm every rate, deadline, and credit cap with the school.</p>
         </div>
@@ -259,7 +299,10 @@
         <p><b>It is not advice.</b> Where you apply, what you major in, and what you spend on applications are your decisions. Confirm every admit rate, deadline, credit cap, and prerequisite with the school's own admissions office or its Common Data Set before you rely on it.</p>
 
         <h3 id="privacy">Privacy</h3>
-        <p>Your record stays in your own browser's local storage. There is no account, no server, no database, and nothing is transmitted anywhere — the calculation runs entirely on your device. Clearing your browser data clears your record. The page loads its typefaces from Google Fonts, which is the only third-party request it makes.</p>
+        <p>Your record stays in your own browser's local storage. There is no account, no server, no database, and nothing is transmitted anywhere — the calculation runs entirely on your device. Clearing your browser data clears your record. Typefaces are served from this site rather than a font provider, so the page makes no third-party request at all.</p>
+
+        <h3 id="programs-data">Program figures</h3>
+        <p>Degrees awarded, graduate earnings and graduate debt come from the U.S. Department of Education's <b>College Scorecard field-of-study file</b>, which is in the public domain. Earnings are the median for graduates of that program at that school one and two years after completing, drawn from federal tax records, and cover students who received federal aid. Schools are matched to the federal record by IPEDS UNITID, and each of this app's majors is mapped to the federal CIP field it falls in — where a major spans two fields, both are pooled and the app says so. Nothing in that pane is modelled or estimated: a figure is either the federal one or it is marked unpublished.</p>
 
         <h3 id="data">Where the numbers come from</h3>
         <p>Each school carries one transfer admit rate and one admitted-transfer GPA. <code>P</code> marks a rate taken from a published transfer figure; <code>E</code> marks one estimated from overall selectivity and peer institutions. Both are approximations compiled for planning. Corrections are welcome and easy to apply — the reference table is a plain text file.</p>

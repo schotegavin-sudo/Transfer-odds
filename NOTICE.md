@@ -24,6 +24,17 @@ fetched to confirm it resolves before being included. Federal government works
 carry no copyright, so the data is free to redistribute. Regenerate it with
 `node tools/refresh-links.mjs`.
 
+`programs.js` is generated from two federal sources, both public domain:
+the College Scorecard field-of-study file (degrees awarded, graduate earnings
+and graduate debt, by institution and CIP field) and the IPEDS directory
+(institution states, used to build per-state pay baselines). Every figure in it
+is the federal one; nothing is interpolated, smoothed or estimated, and figures
+the Department suppresses for small cohorts are carried as absent rather than
+filled in. The mapping from this app's majors to federal CIP fields is in
+`tools/cip-map.json`. Regenerate with `node tools/build-programs.mjs`.
+  - https://collegescorecard.ed.gov/data/
+  - https://nces.ed.gov/ipeds/
+
 ## Institution names
 
 College and university names appear solely to identify the institutions the
