@@ -44,11 +44,12 @@ drawer and takes its own column, so a wide monitor shows the whole tool at once
 with no navigation at all. Past 1900px things get roomier rather than wider,
 and past 2400px the page stops growing and the margins are margins.
 
-The navigation drawer slides in from the left edge on one axis. It is parked
-off-screen rather than hidden, because flipping `visibility` makes the browser
-defer the first frame — which is precisely the frame where the movement has to
-read — and it is opaque rather than frosted, because blurring a full-height
-panel costs those same frames.
+The menu is a 44px translucent tile set into the top right of the bar, and the
+drawer slides out from that same edge on one axis. It is parked off-screen
+rather than hidden, because flipping `visibility` makes the browser defer the
+first frame — precisely the frame where the movement has to read — and it is
+opaque rather than frosted, because blurring a full-height panel costs those
+same frames.
 
 Motion is rationed by how often you trigger it. The odds core animates on every
 keystroke because a dial sliding to a new value *is* the feedback. The form and

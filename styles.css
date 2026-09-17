@@ -229,7 +229,7 @@ a { color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 16px;
+  padding: 12px 18px;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   border-top: 0;
   flex-wrap: wrap;
@@ -543,31 +543,31 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 
 
 /* ------------------------------------------------------------- sidebar */
+/* A small translucent tile, set in from the edge it opens from. */
 .menubtn {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 15px 9px 12px;
-  border: 0;
-  border-radius: 14px;
-  font-family: var(--ui);
-  font-size: 0.8125rem;
-  font-weight: 700;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-sm);
   color: var(--ink);
-  background: var(--clay);
-  box-shadow: var(--clay-shadow);
+  background: var(--glass-strong);
+  backdrop-filter: blur(8px) saturate(115%);
+  -webkit-backdrop-filter: blur(8px) saturate(115%);
+  box-shadow: 0 1px 2px rgba(22, 23, 26, .06);
   cursor: pointer;
-  transition: transform var(--swift), box-shadow var(--swift);
+  transition: transform var(--swift), background var(--swift), border-color var(--swift);
 }
-.menubtn:hover { transform: translateY(-2px); }
-.menubtn:active { transform: translateY(1px) scale(.98); box-shadow: var(--clay-pressed); }
+.menubtn:hover { transform: translateY(-1px); border-color: var(--ink-3); }
+.menubtn:active { transform: translateY(1px) scale(.96); background: var(--clay-2); }
 .bars { display: grid; gap: 4px; width: 17px; }
 .bars i { height: 2px; border-radius: 2px; background: currentColor; transition: transform var(--glide), opacity var(--swift); }
 .menubtn[aria-expanded="true"] .bars i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .menubtn[aria-expanded="true"] .bars i:nth-child(2) { opacity: 0; }
 .menubtn[aria-expanded="true"] .bars i:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-@media (max-width: 440px) { .menubtn-label { display: none; } .menubtn { padding: 10px 12px; } }
 
 .scrim {
   position: fixed;
@@ -585,15 +585,15 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
   position: fixed;
   z-index: 70;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
   width: min(340px, 86vw);
   padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-  border-left: 0;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-right: 0;
   /* Closed, it sits just off the left edge of the screen. Opening is a plain
      slide along one axis — no rotation, no scaling, nothing to read as a
      flicker — so it behaves like a drawer being pulled out. */
@@ -607,7 +607,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
      defer the first frame, which ate the opening slide; an element that is
      always rendered starts moving on the frame you ask it to. `inert` on the
      markup keeps it out of the tab order and the accessibility tree. */
-  transform: translateX(-102%);
+  transform: translateX(102%);
   pointer-events: none;
   transition: transform 380ms cubic-bezier(.32, .72, 0, 1);
   overflow-y: auto;
@@ -650,7 +650,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
   cursor: pointer;
   transition: transform var(--swift), background var(--swift), color var(--swift), box-shadow var(--swift);
 }
-.navitem:hover { background: var(--glass-edge); color: var(--ink); transform: translateX(2px); }
+.navitem:hover { background: var(--glass-edge); color: var(--ink); transform: translateX(-2px); }
 .navitem .navicon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 11px; background: var(--glass-edge); }
 .navitem svg { width: 19px; height: 19px; }
 .navtext b { display: block; font-size: 0.875rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
@@ -689,7 +689,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .linky:hover { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar { transition: none; transform: translateX(-102%); }
+  .sidebar { transition: none; transform: translateX(102%); }
   .sidebar.open { transform: translateX(0); }
 }
 
