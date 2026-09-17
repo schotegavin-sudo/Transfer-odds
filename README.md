@@ -106,6 +106,25 @@ Every row carries a confidence marker: `P` for a published transfer admit rate,
 planning estimates. Verify against a school's Common Data Set, section D, before
 relying on any of them.
 
+## The walkthrough
+
+Four questions on a first visit — GPA and transferable hours, where you are
+transferring from and your residency, your major and entry term — then straight
+to **Best fits**, which is built from exactly those answers. It is skippable at
+every step and re-runnable from a link in the Record pane.
+
+It opens unprompted only when you have not seen it before **and** your list is
+empty. Having seen it is the one permanent answer: it is setup, not a feature.
+An empty list is somebody who never got started, which is who it is for; a list
+with schools on it is work in progress, and a dialog over the top of that is an
+interruption.
+
+Merely *having a saved record* used to suppress it too, which was wrong in a way
+that took a bug report to notice: everyone who had used the app before the
+walkthrough shipped had a record, so they were treated as already onboarded
+having never seen it. A record tells you whether somebody is mid-task, not
+whether they have been shown around.
+
 ## Best fits
 
 Where the walkthrough ends. The odds model knows what you can get into and the

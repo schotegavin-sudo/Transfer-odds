@@ -1009,7 +1009,7 @@ function renderStep() {
 }
 
 function startWalkthrough({ force = false } = {}) {
-  if (!force && (saved || viewingShared || seenWalkthrough())) return;
+  if (!force && !shouldOffer()) return;
   wtStep = 0;
   wtReturn = document.activeElement;
   wtScrim.hidden = false;
@@ -1040,6 +1040,22 @@ function endWalkthrough({ finished } = {}) {
 
 function seenWalkthrough() {
   try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return true; }
+}
+
+/* Whether to open the questions unprompted.
+ *
+ * Having seen them once is the only permanent answer: they are setup, not a
+ * feature, and nobody wants to be set up twice. Merely having a saved record
+ * used to count as well, which quietly locked out every person who had used
+ * this app before the walkthrough existed — they had a record, so they were
+ * treated as onboarded, having never seen it. What a record actually tells you
+ * is whether somebody is in the middle of something: a list with schools on it
+ * is work in progress, and a dialog over the top of it is an interruption. An
+ * empty one is somebody who never got started, which is exactly who this is
+ * for. */
+function shouldOffer() {
+  if (viewingShared || seenWalkthrough()) return false;
+  return !(saved && Array.isArray(saved.list) && saved.list.length > 0);
 }
 
 function advance() {
