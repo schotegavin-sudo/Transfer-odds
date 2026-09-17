@@ -6,7 +6,7 @@
  */
 import { SCHOOLS, MAJORS, MAJOR_BY_ID, score, levers, poolFor, majorRate, Phi, probit } from "./model.js";
 import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js";
-import { deadlineFor, daysUntil, verifyLinks } from "./deadlines.js";
+import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
 import { encodeProfile, decodeProfile } from "./share.js";
 
 let failures = 0, checks = 0;
@@ -291,16 +291,38 @@ await section("Deadlines", () => {
   ok(daysUntil("06-01", new Date(2026, 5, 1)).days === 0, "today should count as 0 days");
 });
 
-/* 14. Source links go somewhere real and carry the school's name. */
+/* 14. Source links are official, and no link is ever guessed. */
 await section("Source links", () => {
-  for (const s of sample) {
+  const names = new Set(SCHOOLS.map((s) => s.name));
+  ok(LINKS.size > 500, `only ${LINKS.size} schools carry an official link`);
+
+  for (const [name, l] of LINKS) {
+    ok(names.has(name), `links.js has "${name}", which is not in the school table`);
+    ok(/^\d{6}$/.test(l.id), `${name}: "${l.id}" is not an IPEDS unit id`);
+    for (const [label, url] of [["admissions", l.admissions], ["apply", l.apply]]) {
+      if (!url) continue;
+      ok(url.startsWith("https://") || url.startsWith("http://"), `${name}: ${label} is not a URL`);
+      ok(!/undefined|NaN|example\.com/.test(url), `${name}: ${label} looks broken — ${url}`);
+    }
+  }
+
+  for (const s of SCHOOLS) {
     const links = verifyLinks(s);
-    ok(links.length === 3, `${s.name}: ${links.length} source links`);
+    ok(links.length >= 1 && links.length <= 3, `${s.name}: ${links.length} links`);
     for (const l of links) {
-      ok(l.href.startsWith("https://"), `${s.name}: ${l.label} is not https`);
-      ok(!/undefined|NaN/.test(l.href), `${s.name}: ${l.label} has a broken URL`);
-      ok(decodeURIComponent(l.href).includes(s.name), `${s.name}: ${l.label} does not carry the school name`);
-      ok(l.note && l.label, `${s.name}: a source link is missing its label or note`);
+      ok(l.href.startsWith("https://"), `${s.name}: ${l.label} is not https — ${l.href}`);
+      ok(l.label && l.note, `${s.name}: a link is missing its label or note`);
+      /* The whole point of this change: no third-party search engines. */
+      ok(!/duckduckgo|google\.com\/search|bing\.com/.test(l.href), `${s.name}: ${l.label} still goes to a search engine`);
+    }
+    const federal = links.filter((l) => l.href.includes("nces.ed.gov"));
+    ok(federal.length === 1, `${s.name}: expected exactly one federal link, got ${federal.length}`);
+    /* A school with a verified address never falls back to the search page. */
+    if (LINKS.has(s.name)) {
+      ok(links.some((l) => l.label === "Admissions office" || l.label === "Apply"),
+        `${s.name} has an official link but none is offered`);
+      ok(!links.some((l) => l.href.includes("collegenavigator/?q=")),
+        `${s.name} has an official link but still falls back to search`);
     }
   }
 });

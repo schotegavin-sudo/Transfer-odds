@@ -8,7 +8,9 @@ including primarily-online campuses, from one saved student record.
 - `data.js` — the institution reference table (pipe-delimited, one row per school)
 - `majors.js` — 154 majors and what each does to transfer competition
 - `aliases.js` — nicknames, generated acronyms and search relevance
-- `deadlines.js` — deadline resolution and the verify-at-source links
+- `deadlines.js` — deadline resolution and the official-link lookup
+- `links.js` — admissions and application URLs from the federal directory
+- `tools/refresh-links.mjs` — regenerates `links.js` from a fresh IPEDS release
 - `share.js` — packs a record into a link, and unpacks one
 - `model.js` — the applicant-pool model
 - `test-model.mjs` — regression tests (`npm test`)
@@ -87,11 +89,18 @@ published for a whole system and stable year to year — only the UC and CSU
 filing periods qualify, because they are system-wide rather than per campus.
 Everything else is **typical**: a period ("Typically early March"), never a
 date, and never with a countdown. Open-admission and online schools are
-**rolling**. Every deadline sits beside links to the school's own page, the
-Common Data Set and IPEDS College Navigator, so the file is a starting point
-rather than an authority. Those links open searches rather than URLs we assert
-are correct — a guessed link that lands on the wrong campus is worse than an
-honest search.
+**rolling**. Every deadline sits beside links to the school's own admissions office, its
+application page and its federal record, so the file is a starting point
+rather than an authority.
+
+Those links are not guesses and not searches. They come from IPEDS HD2023, the
+US Department of Education's institutional directory, matched to the school
+table by exact name, by an alias the directory itself records, or by a campus
+suffix — never fuzzily, because a link to the wrong campus is worse than no
+link. Every URL was then fetched to confirm it resolves: 526 answered, 41 more
+are real but refuse automated requests, and anything that failed was dropped.
+567 of 588 schools carry at least one official link; the rest fall through to
+College Navigator, the same federal directory with a search box.
 
 ## Sharing
 

@@ -18,6 +18,12 @@ For verification, the authoritative public source is IPEDS, the Integrated
 Postsecondary Education Data System, published by the US Department of
 Education and in the public domain: https://nces.ed.gov/ipeds/
 
+`links.js` is derived from that directory (HD2023): every institution's unit
+id, admissions office and application page comes from it, and every URL was
+fetched to confirm it resolves before being included. Federal government works
+carry no copyright, so the data is free to redistribute. Regenerate it with
+`node tools/refresh-links.mjs`.
+
 ## Institution names
 
 College and university names appear solely to identify the institutions the

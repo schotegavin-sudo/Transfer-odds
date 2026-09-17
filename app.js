@@ -382,7 +382,7 @@ function cardHtml(r, i, fresh) {
         ${dl.source ? `<small>${esc(dl.source)}</small>` : dl.kind === "typical" ? `<small>A period, not a date — this one is not published system-wide, so confirm it below.</small>` : ""}
       </p>
 
-      <h4>Check it at the source</h4>
+      <h4>Check with the school</h4>
       <p class="sources">${verifyLinks(s).map((l) =>
         `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${esc(l.label)}<small>${esc(l.note)}</small></a>`).join("")}</p>
 

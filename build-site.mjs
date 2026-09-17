@@ -22,7 +22,7 @@ const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/tr
 const TITLE = "Transfer Odds — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
-const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "deadlines.js", "share.js"];
+const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js"];
 const SITE_FILES = ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "og.png", "fonts.css", "legal.css"];
 
 rmSync(dist, { recursive: true, force: true });
@@ -190,7 +190,7 @@ const singleFile = head
     .replace(/<title>[^<]*<\/title>/, "<title>Transfer Odds (offline copy)</title>")
   + body.replace(/<script type="module"[\s\S]*?<\/script>/, "")
   + `\n<script>\n(function () {\n"use strict";\n`
-  + ["data.js", "majors.js", "model.js", "aliases.js", "deadlines.js", "share.js", "app.js"].map(inline).join("\n")
+  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "app.js"].map(inline).join("\n")
   + `\n})();\n</script>\n</body>\n</html>\n`;
 
 writeFileSync(join(dist, "transfer-odds-offline.html"), singleFile);

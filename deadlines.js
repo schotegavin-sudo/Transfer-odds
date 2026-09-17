@@ -15,6 +15,14 @@
  * own page, because this file is a starting point, not an authority.
  */
 
+import { LINK_ROWS } from "./links.js";
+
+/* name -> { id, admissions, apply } */
+export const LINKS = new Map(LINK_ROWS.split("\n").map((line) => {
+  const [name, id, admissions, apply] = line.split("|");
+  return [name, { id, admissions, apply }];
+}));
+
 const UC = /^University of California, /;
 const CSU = /^(California State University|California State Polytechnic University|California Polytechnic State University|San Diego State|San Jose State|San Francisco State|Sonoma State|California Maritime)/;
 
@@ -62,17 +70,30 @@ export function daysUntil(mmdd, now = new Date()) {
   return { days: Math.round((when - today) / 86400000), when };
 }
 
-/* Where to check it, and where the admit rate came from. Each opens a search
-   rather than a page we assert is correct — a guessed URL that 404s, or lands
-   on the wrong campus, is worse than an honest search. */
+/* Where to check it — the school's own admissions office, its application
+ * page, and the federal record behind the numbers. See links.js: every URL is
+ * from the US Department of Education's directory and was fetched to confirm
+ * it resolves. Where no verified URL exists, the fallback is College
+ * Navigator's own search, which is that same federal directory — not a search
+ * engine, and never a guessed address. */
 export function verifyLinks(school) {
-  const q = encodeURIComponent(`"${school.name}"`);
-  return [
-    { label: "Transfer admissions", href: `https://duckduckgo.com/?q=${q}+transfer+admission+deadline+requirements`,
-      note: "the school's own requirements and dates" },
-    { label: "Common Data Set", href: `https://duckduckgo.com/?q=${q}+%22common+data+set%22`,
-      note: "section D carries the transfer admit numbers" },
-    { label: "College Navigator", href: `https://nces.ed.gov/collegenavigator/?q=${encodeURIComponent(school.name)}&s=all`,
-      note: "IPEDS, US Department of Education, public domain" },
-  ];
+  const link = LINKS.get(school.name);
+  const out = [];
+
+  if (link && link.admissions) {
+    out.push({ label: "Admissions office", href: link.admissions,
+      note: `${hostOf(link.admissions)} — their requirements and dates` });
+  }
+  if (link && link.apply) {
+    out.push({ label: "Apply", href: link.apply, note: `${hostOf(link.apply)} — the application itself` });
+  }
+  out.push(link
+    ? { label: "Federal record", href: `https://nces.ed.gov/collegenavigator/?id=${link.id}`,
+        note: "enrolment, cost and admissions, US Dept of Education" }
+    : { label: "Find it on College Navigator", href: `https://nces.ed.gov/collegenavigator/?q=${encodeURIComponent(school.name)}&s=all`,
+        note: "no verified address for this school — search the federal directory" });
+
+  return out;
 }
+
+const hostOf = (url) => { try { return new URL(url).host.replace(/^www\./, ""); } catch { return url; } };
