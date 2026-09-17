@@ -73,7 +73,25 @@ function practicalFit(school, profile) {
   return school.control === "pub" ? 0.2 : 0.5;
 }
 
-export function buildSlate(profile, PROG, { size = 12, preferLocal = true, includeOnline = true } = {}) {
+/* scope:
+ *   "only"    nothing outside your state is offered at all
+ *   "prefer"  in-state candidates get first refusal on half of every band,
+ *             and rank up in what is left
+ *   "any"     residency is not considered
+ *
+ * "prefer" used to be a ranking term and nothing more, which sounded like a
+ * preference and did not behave as one: an Oregon applicant with five Oregon
+ * programmes in their major was shown one of them, because a 0.22-weight term
+ * cannot outrun a national field. A preference that has to be measured to be
+ * detected is not a preference, so it now reserves places. */
+export function buildSlate(profile, PROG, {
+  size = 12,
+  scope = "prefer",
+  includeOnline = true,
+  preferLocal,                       /* older callers */
+} = {}) {
+  if (preferLocal !== undefined) scope = preferLocal ? "prefer" : "any";
+  const home = (school) => school.state === profile.state;
   const major = findMajor(profile.majorId);
   const majorId = major ? major.id : profile.majorId;
   const covered = Boolean(PROG && PROG.covered(majorId));
@@ -85,6 +103,7 @@ export function buildSlate(profile, PROG, { size = 12, preferLocal = true, inclu
     if (r.blocked) continue;
 
     if (!includeOnline && school.online === 2) continue;
+    if (scope === "only" && !home(school)) continue;
 
     const p = PROG ? PROG.at(school, majorId) : null;
     /* When the major has federal coverage, a school that reported no degrees
@@ -136,7 +155,7 @@ export function buildSlate(profile, PROG, { size = 12, preferLocal = true, inclu
     if (!school.published) caution.push(`its transfer rate is estimated, not published`);
     if (p && p.index === null) caution.push(`earnings for this programme are not published — too few graduates to report`);
 
-    const practical = preferLocal ? practicalFit(school, profile) : 0.5;
+    const practical = scope === "any" ? 0.5 : practicalFit(school, profile);
     candidates.push({
       school, r, program: p, why, caution,
       strength: strength.value,
@@ -181,40 +200,90 @@ export function buildSlate(profile, PROG, { size = 12, preferLocal = true, inclu
     perState.set(c.school.state, (perState.get(c.school.state) || 0) + 1);
   };
 
-  const bands = SHAPE.map((band) => {
-    const pool = candidates
+  const bands = SHAPE.map((band) => ({
+    ...band,
+    pool: candidates
       .filter((c) => c.r.prob >= band.min && c.r.prob < band.max)
-      .sort((a, b) => b.rank - a.rank);
-    const rows = [];
-    for (const c of pool) {
-      if (rows.length >= band.want) break;
+      .sort((a, b) => b.rank - a.rank),
+    rows: [],
+  }));
+
+  const fill = (band, from, upTo) => {
+    for (const c of from) {
+      if (band.rows.length >= upTo) break;
       if (!allowed(c)) continue;
       take(c);
-      rows.push(c);
+      band.rows.push(c);
     }
-    return { ...band, pool, rows };
-  });
+  };
+
+  /* Half the list is held for your own state before the rest of the country is
+     let in. The target is counted across the whole list rather than per band,
+     because a state's programmes do not spread themselves evenly across your
+     odds: Idaho's four computer science departments are all safeties, and a
+     per-band quota of two handed the other two places to the national field
+     while two Idaho options sat unused.
+     
+     It is a floor, not a ceiling. The ordinary ranking pass below adds more
+     in-state schools wherever they earn the place — an Ohio nursing list comes
+     out two thirds Ohio — and takes none of these away. */
+  if (scope === "prefer") {
+    let held = Math.min(candidates.filter((c) => home(c.school)).length, Math.ceil(size / 2));
+    for (const band of bands) {
+      if (held <= 0) break;
+      const before = band.rows.length;
+      fill(band, band.pool.filter((c) => home(c.school)), Math.min(band.want, before + held));
+      held -= band.rows.length - before;
+    }
+  }
+
+  for (const band of bands) fill(band, band.pool, band.want);
 
   /* Anything the shape could not fill is spent on the bands that had more to
-     offer — a list of twelve is worth more than a shape held open. */
-  let shortfall = size - bands.reduce((t, b) => t + b.rows.length, 0);
-  for (const band of [...bands].sort((a, b) => b.pool.length - a.pool.length)) {
-    while (shortfall > 0) {
-      const next = band.pool.find(allowed);
-      if (!next) break;
-      take(next);
-      band.rows.push(next);
-      shortfall--;
+     offer — a list of twelve is worth more than a shape held open.
+     
+     In-state candidates go first here too. A state whose programmes all sit in
+     one band cannot fit them inside that band's four places, and without this
+     the overflow went to the national field while in-state options that the
+     applicant asked to see sat unused. */
+  const overflow = (pick) => {
+    let shortfall = size - bands.reduce((t, b) => t + b.rows.length, 0);
+    for (const band of [...bands].sort((a, b) => b.pool.length - a.pool.length)) {
+      while (shortfall > 0) {
+        const next = band.pool.find((c) => allowed(c) && pick(c));
+        if (!next) break;
+        take(next);
+        band.rows.push(next);
+        shortfall--;
+      }
+      if (shortfall <= 0) break;
     }
-    if (shortfall <= 0) break;
-  }
+  };
+  if (scope === "prefer") overflow((c) => home(c.school));
+  overflow(() => true);
   for (const band of bands) band.rows.sort((a, b) => b.rank - a.rank);
+
+  const rows = bands.flatMap((b) => b.rows);
+  /* Reported so the pane can say what it could not do, rather than quietly
+     going out of state and letting the control look broken. */
+  const homeAvailable = candidates.filter((c) => home(c.school)).length;
+  /* How many of those the shape could actually hold. Arizona runs five
+     business programmes and every one of them is a safety; a balanced list has
+     four safety places, so the fifth cannot appear without displacing a target
+     — which would be a worse list, not a more local one. The pane says this
+     rather than implying the state had nothing more to offer. */
+  const homeReachable = bands.reduce(
+    (t, b) => t + Math.min(b.pool.filter((c) => home(c.school)).length, b.want), 0);
 
   return {
     covered,
     major,
+    scope,
     bands: bands.filter((b) => b.rows.length),
-    total: bands.reduce((t, b) => t + b.rows.length, 0),
+    total: rows.length,
     considered: candidates.length,
+    homeAvailable,
+    homeReachable,
+    homeShown: rows.filter((c) => home(c.school)).length,
   };
 }

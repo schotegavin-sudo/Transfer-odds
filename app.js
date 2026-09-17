@@ -322,15 +322,19 @@ function renderFits() {
 
   const major = findMajor(profile.majorId);
   slate = buildSlate(profile, PROG, {
-    preferLocal: el("fitscope").value === "local",
+    scope: el("fitscope").value,
     includeOnline: el("fitonline").value === "yes",
   });
+  renderScopeNote();
 
   el("fitcount").textContent = slate.total ? `${slate.total} of ${slate.considered} that run it` : "";
 
   if (!slate.total) {
+    el("fitscopenote").textContent = "";
     node.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:12px 18px">
-      ${slate.covered
+      ${slate.scope === "only"
+        ? `No school in ${esc(STATE_NAMES[profile.state] || profile.state)} in this database runs <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Switch to <b>prefer</b> or <b>anywhere</b> above to see schools outside the state.`
+        : slate.covered
         ? `No school in this database reported bachelor's degrees in <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Widen them above, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`
         : `<b>${esc(major ? major.name : profile.majorId)}</b> has no bachelor's field of its own in the federal data, so there is no way to tell which schools run it. Pick a nearer major in your record, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`}
     </p>`;
@@ -354,6 +358,31 @@ function renderFits() {
       profile.list = [...profile.list, b.dataset.add];
       touched();
     }));
+}
+
+/* What the residency setting managed, in a sentence. A control that silently
+   fails to do what its label says is worse than no control. */
+function renderScopeNote() {
+  const node = el("fitscopenote");
+  const where = STATE_NAMES[profile.state] || profile.state;
+  if (!slate || !slate.total) { node.textContent = ""; return; }
+  if (slate.scope === "any") {
+    node.textContent = `Ranked on the programs alone — residency is not being considered.`;
+    return;
+  }
+  if (slate.scope === "only") {
+    node.textContent = `${slate.homeShown} ${where} school${slate.homeShown === 1 ? "" : "s"}, out of ${slate.homeAvailable} in ${where} that ${slate.homeAvailable === 1 ? "runs" : "run"} this major. Nothing outside the state is being offered.`;
+    return;
+  }
+  const away = slate.total - slate.homeShown;
+  node.textContent = slate.homeAvailable === 0
+    ? `No school in ${where} in this database runs this major, so every suggestion is from elsewhere.`
+    : away === 0
+      ? `All ${slate.total} are in ${where}.`
+      : `${slate.homeShown} of ${slate.total} ${slate.homeShown === 1 ? "is" : "are"} in ${where}, from the ${slate.homeAvailable} there that ${slate.homeAvailable === 1 ? "runs" : "run"} this major. The other ${away} ${away === 1 ? "is" : "are"} from elsewhere because ${
+          slate.homeAvailable <= slate.homeShown
+            ? `${where} has no more`
+            : `a balanced list only holds so many at each level of reach, and the rest of ${where} sits at one you are already full on`}.`;
 }
 
 function fitRow(c) {

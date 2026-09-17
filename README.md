@@ -158,16 +158,35 @@ its reasons in plain sentences:
    one with real evidence purely by having none.
 3. **What it costs to carry.** Median debt at graduation per dollar of
    first-year pay.
-4. **Whether you could actually go.** In-state publics rank up, out-of-state
-   publics rank down. This is a stated preference with a switch on it, not a
-   thumb on the scale: turning it off removes the term rather than reversing it.
+4. **Whether you could actually go.** Three settings. *Only* is a hard filter.
+   *Prefer* (the default) holds half the list for your own state before the
+   rest of the country is let in, and ranks in-state publics up in what is
+   left, out-of-state publics down. *Anywhere* removes the term rather than
+   reversing it. The line above the list always says how many of the
+   suggestions are in your state, how many run the major there, and why the
+   others are not.
+
+   The held places are counted across the whole list, not per band, because a
+   state's programmes do not spread themselves evenly across your odds: Idaho's
+   four computer science departments are all safeties, and a per-band quota of
+   two handed the other two places away while two Idaho options sat unused. It
+   is a floor rather than a ceiling — the ordinary ranking adds more wherever
+   they earn it, and an Ohio nursing list comes out three quarters Ohio.
 5. **A spread, not a pile.** Odds sort candidates into bands and the list is
    filled from each — four you should get into, four live chances, a few
    reaches — because twelve reaches is a bad list however strong the programs.
 6. **Caps.** At most two primarily-online universities, and three from any one
    state other than yours.
 
-Two of those came out of watching it fail. Ranking on the *national* earnings
+Three of those came out of watching it fail. "Prefer schools in my state" was
+at first only a ranking term, which sounded like a preference and did not
+behave as one: an Oregon applicant with eight Oregon programmes in their major
+was shown one of them, because a weight of 0.22 cannot outrun a national field.
+Measured across every state and five majors, small and mid-sized states were
+getting one or two of twelve. Holding places rather than adding weight took
+Oregon from 1 to 6 and Ohio from 4 to 9.
+
+Ranking on the *national* earnings
 index put California at the top of every nursing slate and left an Ohio
 applicant with no Ohio schools at all, because in a regionally paid field the
 national figure is mostly a statement about the state — hence the local

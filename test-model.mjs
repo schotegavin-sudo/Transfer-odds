@@ -470,6 +470,24 @@ await section("Best fits", async () => {
       for (const gpa of [2.4, 3.0, 3.6, 4.0])
         profiles.push(withProfile({ state, majorId, gpa }));
 
+  /* Every filter holds under every combination, not just on its own. */
+  for (const scope of ["only", "prefer", "any"]) {
+    for (const includeOnline of [true, false]) {
+      for (const majorId of ["nursing", "cs", "psych"]) {
+        const p = withProfile({ state: "OH", majorId, gpa: 3.3 });
+        const s = buildSlate(p, PROG, { scope, includeOnline });
+        const rows = s.bands.flatMap((b) => b.rows);
+        const where = `${scope}/${includeOnline ? "with" : "without"} online/${majorId}`;
+        if (scope === "only") for (const c of rows) ok(c.school.state === "OH", `${where}: ${c.school.name} is not in OH`);
+        if (!includeOnline) for (const c of rows) ok(c.school.online !== 2, `${where}: ${c.school.name} is online`);
+        for (const c of rows) {
+          ok(!c.r.blocked, `${where}: ${c.school.name} cannot admit for the term`);
+          if (s.covered) ok(c.program && c.program.awards >= 5, `${where}: ${c.school.name} runs no such program`);
+        }
+      }
+    }
+  }
+
   for (const p of profiles) {
     const s = buildSlate(p, PROG);
     const rows = s.bands.flatMap((b) => b.rows);
@@ -508,15 +526,44 @@ await section("Best fits", async () => {
         ok(c.r.prob >= band.min && c.r.prob < band.max, `${where}: ${c.school.name} at ${c.r.prob} is in the ${band.key} band`);
   }
 
-  /* The local preference has to actually do something, or it is a lie on the
-     switch: an Ohio applicant should see Ohio schools they would not otherwise. */
-  const ohio = withProfile({ state: "OH", majorId: "nursing", gpa: 3.42 });
-  const local = buildSlate(ohio, PROG, { preferLocal: true }).bands.flatMap((b) => b.rows);
-  const any = buildSlate(ohio, PROG, { preferLocal: false }).bands.flatMap((b) => b.rows);
-  const homeIn = (rows) => rows.filter((c) => c.school.state === "OH").length;
-  ok(homeIn(local) > homeIn(any), `preferring local gave ${homeIn(local)} Ohio schools against ${homeIn(any)} without it`);
+  /* Residency, across every state and several majors. The switch used to be a
+     ranking term that a national field simply outran, so these check what the
+     labels promise rather than that the code ran. */
+  const states = [...new Set(SCHOOLS.map((s) => s.state))];
+  for (const state of states) {
+    for (const majorId of ["nursing", "cs", "bizadmin"]) {
+      const p = withProfile({ state, majorId, gpa: 3.3 });
+      const where = `${state}/${majorId}`;
+
+      const only = buildSlate(p, PROG, { scope: "only" });
+      /* "Only schools in my state" admits no exceptions at all. */
+      for (const c of only.bands.flatMap((b) => b.rows))
+        ok(c.school.state === state, `${where}: "only" offered ${c.school.name} in ${c.school.state}`);
+      ok(only.homeShown === only.total, `${where}: "only" reported ${only.homeShown} in state of ${only.total}`);
+
+      const prefer = buildSlate(p, PROG, { scope: "prefer" });
+      /* "Prefer" has to visibly prefer: where the state has candidates to
+         offer, it must take at least as many as are available up to half the
+         list — the failure this replaced showed one of five. */
+      /* The floor is half the list, or everything the band shape can hold,
+         whichever is smaller — a state whose programmes are all safeties
+         cannot fill the target band with them. */
+      const want = Math.min(prefer.homeReachable, Math.ceil(12 / 2));
+      ok(prefer.homeShown >= want,
+        `${where}: "prefer" showed ${prefer.homeShown} in state, but ${want} were reachable (${prefer.homeAvailable} available)`);
+      /* And it must never do worse than not preferring at all. */
+      const any = buildSlate(p, PROG, { scope: "any" });
+      ok(prefer.homeShown >= any.homeShown,
+        `${where}: preferring gave ${prefer.homeShown} in state, not preferring gave ${any.homeShown}`);
+      /* The count the pane prints has to be the count on the page. */
+      for (const s2 of [only, prefer, any])
+        ok(s2.homeShown === s2.bands.flatMap((b) => b.rows).filter((c) => c.school.state === state).length,
+          `${where}: homeShown disagrees with the rows`);
+    }
+  }
 
   /* Turning online off really removes them rather than reordering them. */
+  const ohio = withProfile({ state: "OH", majorId: "nursing", gpa: 3.42 });
   const campus = buildSlate(ohio, PROG, { includeOnline: false }).bands.flatMap((b) => b.rows);
   ok(campus.every((c) => c.school.online !== 2), "campus-only still suggested an online university");
   ok(campus.length > 0, "campus-only produced nothing at all");
