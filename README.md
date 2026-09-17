@@ -106,6 +106,49 @@ Every row carries a confidence marker: `P` for a published transfer admit rate,
 planning estimates. Verify against a school's Common Data Set, section D, before
 relying on any of them.
 
+## Best fits
+
+Where the walkthrough ends. The odds model knows what you can get into and the
+program tables know what is worth getting into; `fit.js` is the only place the
+two meet, and it exists because the first build of this app opened on eight
+California schools that belonged to nobody.
+
+The recipe is the whole recipe — there is no hidden score, and every row states
+its reasons in plain sentences:
+
+1. **Who runs the program.** Only schools that reported bachelor's degrees in
+   the major last year. A school that graduated nobody in it is not a fit.
+2. **What the program is worth.** Graduate earnings against the field, measured
+   against the school's own state wherever that baseline exists. Where earnings
+   are unpublished, department size and campus focus stand in — and they cannot
+   carry a school as high as a measured result can, so a school never outranks
+   one with real evidence purely by having none.
+3. **What it costs to carry.** Median debt at graduation per dollar of
+   first-year pay.
+4. **Whether you could actually go.** In-state publics rank up, out-of-state
+   publics rank down. This is a stated preference with a switch on it, not a
+   thumb on the scale: turning it off removes the term rather than reversing it.
+5. **A spread, not a pile.** Odds sort candidates into bands and the list is
+   filled from each — four you should get into, four live chances, a few
+   reaches — because twelve reaches is a bad list however strong the programs.
+6. **Caps.** At most two primarily-online universities, and three from any one
+   state other than yours.
+
+Two of those came out of watching it fail. Ranking on the *national* earnings
+index put California at the top of every nursing slate and left an Ohio
+applicant with no Ohio schools at all, because in a regionally paid field the
+national figure is mostly a statement about the state — hence the local
+baseline winning outright rather than being averaged in. And open-admission
+online universities swept all four safety places on odds, debt and reported
+earnings together, leaving a student with no campus they could drive to — hence
+the cap.
+
+Nothing is added to your list until you add it. The list then keeps itself:
+losing twelve deliberate additions to a closed tab because a Save button went
+unpressed is not a reasonable thing to ask of anybody. The one exception is
+while you are viewing somebody else's shared record, where writing it down
+would overwrite your own.
+
 ## Programs
 
 The odds model answers "can I get in". The Programs pane answers "is the

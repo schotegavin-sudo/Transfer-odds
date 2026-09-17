@@ -808,6 +808,77 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
   .pr-lead { min-width: 0; }
 }
 
+/* ------------------------------------------------------------ best fits
+ *
+ * Grouped by how likely you are to get in, because that is the decision the
+ * list is for. Each row leads with the odds, because that is what sorts it,
+ * and carries its reasons as plain sentences rather than a score — the whole
+ * claim of the pane is that you can check its work.
+ */
+
+.fitband { margin: 14px 18px 0; }
+.fitband h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 6px; font-size: 0.8125rem; font-weight: 700;
+  letter-spacing: .01em;
+}
+.fitband h3 small { font-weight: 500; color: var(--ink-3); font-size: 0.6875rem; letter-spacing: 0; }
+.fitband h3 .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.fitband ul { list-style: none; margin: 0; padding: 0; }
+
+.fitrow {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr auto;
+  align-items: start;
+  gap: 14px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--glass-edge);
+}
+.fitrow:first-child { border-top: 0; }
+.fr-odds { text-align: center; padding-top: 2px; }
+.fr-odds b {
+  display: block; font-family: var(--mono); font-size: 1.0625rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.fr-odds small {
+  display: block; font-size: 0.5625rem; letter-spacing: .07em;
+  text-transform: uppercase; font-weight: 600;
+}
+.fr-main { min-width: 0; }
+.fr-main .name { font-weight: 600; font-size: 0.875rem; }
+.fr-main .meta { font-size: 0.6875rem; color: var(--ink-3); margin-top: 1px; }
+.fr-why, .fr-caution { list-style: none; margin: 6px 0 0; padding: 0; }
+.fr-why li, .fr-caution li {
+  position: relative; padding-left: 14px; margin-top: 2px;
+  font-size: 0.7188rem; line-height: 1.5; color: var(--ink-2);
+}
+.fr-why li::before {
+  content: ""; position: absolute; left: 3px; top: .62em;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--ink-3);
+}
+.fr-caution li { color: var(--reach); }
+.fr-caution li::before { content: "!"; position: absolute; left: 2px; font-weight: 700; }
+
+.fitrecipe {
+  margin: 12px 18px 0; padding: 16px 18px;
+  border-radius: var(--radius); background: var(--clay-2);
+}
+.fitrecipe h4 { margin: 0 0 8px; font-size: 0.8125rem; }
+.fitrecipe ol { margin: 0; padding-left: 18px; }
+.fitrecipe li { font-size: 0.7188rem; line-height: 1.6; color: var(--ink-2); margin-bottom: 6px; }
+.fitrecipe li b { color: var(--ink); }
+.fitrecipe .caution { margin: 8px 0 0; font-size: 0.6875rem; line-height: 1.55; color: var(--ink-3); }
+
+@media (max-width: 560px) {
+  .fitrow { grid-template-columns: 3.5rem 1fr; row-gap: 8px; }
+  .fitrow > .btn { grid-column: 2; justify-self: start; }
+}
+
+#pane-fits > .rail-head { padding: 18px 18px 0; }
+@media (max-width: 1000px) {
+  #pane-fits > .rail-head { padding-right: 62px; }
+}
+
 .linky {
   border: 0; background: none; padding: 0; cursor: pointer;
   font: inherit; color: var(--ink-2);

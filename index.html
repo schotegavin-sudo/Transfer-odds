@@ -38,6 +38,10 @@
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="5" rx="2.5"/><rect x="3" y="14" width="12" height="5" rx="2.5"/></svg></span>
         <span class="navtext"><b>My list</b><small>Your schools, ranked by odds</small></span>
       </button>
+      <button type="button" class="navitem" data-tab="fits" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 14.4 9l5.6.5-4.3 3.9 1.3 5.6L12 16l-5 3 1.3-5.6L4 9.5 9.6 9z"/></svg></span>
+        <span class="navtext"><b>Best fits</b><small>Suggestions built from your record</small></span>
+      </button>
       <button type="button" class="navitem" data-tab="explore" aria-current="false">
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg></span>
         <span class="navtext"><b>Explore</b><small>Search all 588 schools</small></span>
@@ -205,6 +209,46 @@
       <div class="cards" id="cards"></div>
     </section>
 
+    <section class="pane glass" id="pane-fits" role="tabpanel" aria-label="Best fits" hidden>
+      <div class="rail-head">
+        <h2>Best fits</h2>
+        <span class="saved" id="fitcount"></span>
+      </div>
+      <p class="hint" style="padding:0 18px 0">
+        A starting list, not a recommendation: the strongest programs in your major at each level of reach for you.
+        Nothing here is added to your list until you add it.
+        <button type="button" class="linky" id="fitwhy">How this is built</button>
+      </p>
+
+      <div class="tools">
+        <select id="fitscope" aria-label="Where to look">
+          <option value="local">Prefer schools in my state</option>
+          <option value="any">Anywhere in the country</option>
+        </select>
+        <select id="fitonline" aria-label="Include online universities">
+          <option value="yes">Include online universities</option>
+          <option value="no">Campus programs only</option>
+        </select>
+        <button type="button" class="btn" id="fitrefresh">Rebuild</button>
+        <button type="button" class="btn primary" id="fitaddall">Add all</button>
+      </div>
+
+      <div class="fitrecipe" id="fitrecipe" hidden>
+        <h4>How this is built</h4>
+        <ol>
+          <li><b>Who runs the program.</b> Every school that reported bachelor's degrees in your major to the Department of Education last year. A school that graduated nobody in it is not a fit, whatever else it is.</li>
+          <li><b>What the program is worth.</b> Its graduates' earnings against everyone who finished the same field — measured against the school's own state where that figure exists, because in a field whose pay is regional the national comparison is mostly a statement about the state. Where earnings are unpublished, the size of the department and how central it is to the campus stand in, and they cannot carry a school as high as a measured result can.</li>
+          <li><b>What it costs to carry.</b> Median debt at graduation against median first-year pay.</li>
+          <li><b>Whether you could actually go.</b> In-state publics rank up; out-of-state publics rank down, because they charge non-resident tuition and hold most transfer seats for residents. Turn that off above and the term is removed rather than reversed.</li>
+          <li><b>A spread, not a pile.</b> Your odds sort the results into bands and the list is filled from each, so it comes out as four you should get into, four live chances and a few reaches — not twelve of whichever kind scored best.</li>
+          <li><b>Caps.</b> At most two primarily-online universities and three schools from any one state other than yours. Open-admission online schools otherwise take every safety place and leave you with no campus you can drive to.</li>
+        </ol>
+        <p class="caution">Every input is the same public data used everywhere else in this app: modelled admission odds, and federal figures for the programs. None of it knows this year's department caps, what a campus is like, or whether you would be happy there.</p>
+      </div>
+
+      <div id="fitresults"></div>
+    </section>
+
     <section class="pane glass" id="pane-explore" role="tabpanel" aria-label="Explore" hidden>
       <div class="tools">
         <input type="search" id="q" aria-label="Search schools" placeholder="Search by name, nickname or state">
@@ -287,6 +331,8 @@
           <h3>Programs are reported, not ranked</h3>
           <p>The Programs pane ranks nothing on reputation, because no reusable ranking of program quality exists to draw on. It reports four measured things and lets you sort on each: how many degrees a school awards in the field, how central the field is to that campus, what its graduates earn against everyone who finished the same field, and what they owe against what they earn. Earnings come from federal tax records, so they are counted rather than surveyed.</p>
           <p class="caution">Earnings read who enrolled as much as what was taught, and they are nominal — a school in an expensive city sits higher for that reason alone, which is why every field also carries its own state's median. Roughly a third of programs publish no earnings at all: the Department suppresses any figure drawn from too few graduates to report safely, and those show a size and nothing else rather than an estimate.</p>
+          <h3>Suggestions are a spread, not a pile</h3>
+          <p>Best fits puts the two halves of this app together: the odds decide which band a school competes in, and the program tables decide which schools lead that band. The list is then filled from every band rather than from the top, because twelve reaches is a bad list however strong the programs are. Two caps keep one kind of school from being the whole answer — at most two primarily-online universities, and three from any state but your own.</p>
           <h3>Read it as a bracket</h3>
           <p class="caution"><code>P</code> marks a published transfer admit rate, <code>E</code> one estimated from selectivity. The model does not know which majors a campus offers, or this year's department caps. Admission turns on things no calculator sees. Confirm every rate, deadline, and credit cap with the school.</p>
         </div>

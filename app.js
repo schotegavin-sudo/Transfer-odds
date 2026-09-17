@@ -6,6 +6,7 @@ import { searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks } from "./deadlines.js";
 import { shareLink, decodeProfile, readHash } from "./share.js";
 import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
+import { buildSlate } from "./fit.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -289,6 +290,77 @@ function programSection(s, majorId) {
     </tbody></table>`;
 }
 
+
+/* ------------------------------------------------------------- best fits
+ *
+ * The walkthrough ends here rather than on an empty list. Twelve schools that
+ * run your major, spread across what you could actually get into, each one
+ * saying why it is on the page. Nothing is added to the list until it is
+ * added on purpose — the old build filled the list for you, which meant the
+ * first thing anybody saw was eight schools that were nobody's.
+ */
+
+let slate = null;
+
+function renderFits() {
+  const node = el("fitresults");
+  if (!PROG) {
+    el("fitcount").textContent = "";
+    node.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:12px 18px">Reading the federal program tables…</p>`;
+    return;
+  }
+
+  const major = findMajor(profile.majorId);
+  slate = buildSlate(profile, PROG, {
+    preferLocal: el("fitscope").value === "local",
+    includeOnline: el("fitonline").value === "yes",
+  });
+
+  el("fitcount").textContent = slate.total ? `${slate.total} of ${slate.considered} that run it` : "";
+
+  if (!slate.total) {
+    node.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:12px 18px">
+      ${slate.covered
+        ? `No school in this database reported bachelor's degrees in <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Widen them above, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`
+        : `<b>${esc(major ? major.name : profile.majorId)}</b> has no bachelor's field of its own in the federal data, so there is no way to tell which schools run it. Pick a nearer major in your record, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`}
+    </p>`;
+    return;
+  }
+
+  const unadded = slate.bands.flatMap((b) => b.rows).filter((c) => !profile.list.includes(c.school.name));
+  el("fitaddall").textContent = unadded.length ? `Add ${unadded.length} to my list` : "All added";
+  el("fitaddall").disabled = unadded.length === 0;
+
+  node.innerHTML = slate.bands.map((band) => `
+    <section class="fitband">
+      <h3><span class="dot t-${band.key}"></span>${esc(band.label)}
+        <small>${band.key === "likely" ? "better than 3 in 5" : band.key === "target" ? "1 in 3 to 3 in 5" : band.key === "reach" ? "1 in 8 to 1 in 3" : "under 1 in 8"}</small></h3>
+      <ul>${band.rows.map((c) => fitRow(c)).join("")}</ul>
+    </section>`).join("");
+
+  node.querySelectorAll("[data-add]").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (profile.list.includes(b.dataset.add)) return;
+      profile.list = [...profile.list, b.dataset.add];
+      touched();
+    }));
+}
+
+function fitRow(c) {
+  const s = c.school;
+  const added = profile.list.includes(s.name);
+  return `<li class="fitrow">
+    <div class="fr-odds t-${c.r.tier.key}"><b>${pct(c.r.prob)}%</b><small>${esc(c.r.tier.label)}</small></div>
+    <div class="fr-main">
+      <div class="name">${esc(s.name)}</div>
+      <div class="meta">${s.state} · ${controlOf(s)}${s.online === 2 ? " · primarily online" : ""} · ${s.rate}% transfer rate${s.published ? "" : " (est.)"}</div>
+      <ul class="fr-why">${c.why.map((w) => `<li>${w}</li>`).join("")}</ul>
+      ${c.caution.length ? `<ul class="fr-caution">${c.caution.map((w) => `<li>${w}</li>`).join("")}</ul>` : ""}
+    </div>
+    <button type="button" class="btn sm" data-add="${esc(s.name)}" ${added ? "disabled" : ""}>${added ? "added" : "Add"}</button>
+  </li>`;
+}
+
 /* ---------------------------------------------------------------- utils */
 
 const el = (id) => document.getElementById(id);
@@ -403,12 +475,17 @@ function resetBanner() {
   const b = el("banner");
   b.className = "hint";
   b.hidden = false;
-  b.innerHTML = `Nothing is saved until you press <b>Save record</b>, and it never leaves this browser.
+  b.innerHTML = `This record saves itself in this browser as you change it, and never leaves it.
     <button type="button" class="linky" id="rewalk">Run the setup questions again</button>`;
   el("rewalk").addEventListener("click", () => startWalkthrough({ force: true }));
 }
 
 function touched() {
+  /* Adding a school is a deliberate act, and losing twelve of them to a closed
+     tab because a Save button went unpressed is not a reasonable thing to ask
+     of anybody. So the record keeps itself — except while you are looking at
+     somebody else's, where writing it down would overwrite your own. */
+  if (!viewingShared) save();
   render();
 }
 
@@ -461,6 +538,7 @@ function render() {
   renderList();
   renderResults();
   renderPrograms();
+  renderFits();
 }
 
 function renderList() {
@@ -476,7 +554,7 @@ function renderList() {
   lastSignature = signature;
 
   if (results.length === 0) {
-    el("cards").innerHTML = `<p class="empty glass" style="padding:40px 20px">No schools yet. Open <b>Explore</b> and add a few.</p>`;
+    el("cards").innerHTML = `<p class="empty glass" style="padding:40px 20px">No schools yet. <b>Best fits</b> has suggestions built from your record, or search all ${SCHOOLS.length} in <b>Explore</b>.</p>`;
     return;
   }
   /* An expanded card stays expanded when the list is redrawn — a keystroke in
@@ -742,7 +820,7 @@ function initMotion() {
  * keyboard as well as the pointer.
  */
 
-const PANES = { record: "pane-record", list: "pane-list", explore: "pane-explore", programs: "pane-programs", method: "pane-method", legal: "pane-legal" };
+const PANES = { record: "pane-record", list: "pane-list", fits: "pane-fits", explore: "pane-explore", programs: "pane-programs", method: "pane-method", legal: "pane-legal" };
 let currentTab = "list";
 
 function setTab(name, { animate = true, focus = false } = {}) {
@@ -770,7 +848,7 @@ function setTab(name, { animate = true, focus = false } = {}) {
   }
   document.querySelectorAll(".navitem").forEach((b) =>
     b.setAttribute("aria-current", b.dataset.tab === name ? "page" : "false"));
-  if (name === "programs") ensurePrograms();
+  if (name === "programs" || name === "fits") ensurePrograms();
   if (focus) {
     const pane = el(PANES[name]);
     pane.setAttribute("tabindex", "-1");
@@ -951,8 +1029,10 @@ function endWalkthrough({ finished } = {}) {
   render();
   if (finished) {
     save();
-    setTab("explore", { focus: true });
-    requestAnimationFrame(() => el("q").focus({ preventScroll: true }));
+    /* Straight to the suggestions: the four answers just given are exactly
+       what they are built from, so there is something waiting. */
+    setTab("fits", { focus: true });
+    ensurePrograms();
   } else if (wtReturn instanceof HTMLElement) {
     wtReturn.focus({ preventScroll: true });
   }
@@ -1030,6 +1110,19 @@ for (const id of ["q", "fstate", "fcontrol", "fonline", "fsel", "fsort"]) {
   el(id).addEventListener("input", renderResults);
 }
 el("pmajor").addEventListener("input", () => { programMajorPinned = true; });
+for (const id of ["fitscope", "fitonline"]) el(id).addEventListener("input", renderFits);
+el("fitrefresh").addEventListener("click", () => { ensurePrograms(); renderFits(); });
+el("fitwhy").addEventListener("click", () => {
+  const box = el("fitrecipe");
+  box.hidden = !box.hidden;
+  el("fitwhy").textContent = box.hidden ? "How this is built" : "Hide";
+});
+el("fitaddall").addEventListener("click", () => {
+  if (!slate) return;
+  const names = slate.bands.flatMap((b) => b.rows.map((c) => c.school.name));
+  profile.list = [...profile.list, ...names.filter((n) => !profile.list.includes(n))];
+  touched();
+});
 for (const id of ["pmajor", "psort", "pstate", "pmin", "pscope"]) {
   el(id).addEventListener("input", () => { ensurePrograms(); renderPrograms(); });
 }

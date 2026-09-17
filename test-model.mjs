@@ -9,6 +9,7 @@ import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js"
 import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
 import { encodeProfile, decodeProfile } from "./share.js";
 import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
+import { buildSlate } from "./fit.js";
 import { MAJOR_CIP, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
 
 let failures = 0, checks = 0;
@@ -458,6 +459,87 @@ await section("Program data", async () => {
     ok(f.natAwards >= 0, `CIP ${f.cip} has negative awards`);
   }
   ok(CIP_ROWS.split("\n").length === PROG.fields.size, "field rows and parsed fields disagree");
+});
+
+
+await section("Best fits", async () => {
+  const PROG = await loadPrograms();
+  const profiles = [];
+  for (const state of ["CA", "NY", "TX", "OH", "FL", "WY"])
+    for (const majorId of ["nursing", "cs", "bizadmin", "english", "mecheng", "crimjust"])
+      for (const gpa of [2.4, 3.0, 3.6, 4.0])
+        profiles.push(withProfile({ state, majorId, gpa }));
+
+  for (const p of profiles) {
+    const s = buildSlate(p, PROG);
+    const rows = s.bands.flatMap((b) => b.rows);
+    const where = `${p.state}/${p.majorId}/${p.gpa}`;
+
+    ok(rows.length > 0, `${where}: produced an empty slate`);
+    ok(rows.length <= 12, `${where}: produced ${rows.length} rows, more than asked for`);
+
+    /* A suggestion offered twice is a bug you would notice immediately. */
+    const names = rows.map((c) => c.school.name);
+    ok(new Set(names).size === names.length, `${where}: the same school appears twice`);
+
+    for (const c of rows) {
+      /* Nothing is suggested that does not run the major, when the federal
+         data knows which schools do. */
+      if (s.covered) ok(c.program && c.program.awards >= 5, `${where}: ${c.school.name} was suggested without a program in the major`);
+      /* Nothing is suggested that cannot take you in the term you asked for. */
+      ok(!c.r.blocked, `${where}: ${c.school.name} does not admit for ${p.term}`);
+      /* Every row explains itself. A suggestion with no stated reason is the
+         black box this pane exists not to be. */
+      ok(c.why.length > 0, `${where}: ${c.school.name} was suggested with no reason given`);
+      ok(c.rank > 0 && c.rank <= 1, `${where}: ${c.school.name} has rank ${c.rank}`);
+    }
+
+    /* The caps: a slate that is all online schools, or all one state, is the
+       failure mode the bands exist to prevent. */
+    ok(rows.filter((c) => c.school.online === 2).length <= 2, `${where}: more than two online universities`);
+    const byState = new Map();
+    for (const c of rows) byState.set(c.school.state, (byState.get(c.school.state) || 0) + 1);
+    for (const [st, n] of byState)
+      ok(st === p.state || n <= 3, `${where}: ${n} schools from ${st}, which is not the applicant's state`);
+
+    /* The bands really are ordered by odds, and each row sits in its own. */
+    for (const band of s.bands)
+      for (const c of band.rows)
+        ok(c.r.prob >= band.min && c.r.prob < band.max, `${where}: ${c.school.name} at ${c.r.prob} is in the ${band.key} band`);
+  }
+
+  /* The local preference has to actually do something, or it is a lie on the
+     switch: an Ohio applicant should see Ohio schools they would not otherwise. */
+  const ohio = withProfile({ state: "OH", majorId: "nursing", gpa: 3.42 });
+  const local = buildSlate(ohio, PROG, { preferLocal: true }).bands.flatMap((b) => b.rows);
+  const any = buildSlate(ohio, PROG, { preferLocal: false }).bands.flatMap((b) => b.rows);
+  const homeIn = (rows) => rows.filter((c) => c.school.state === "OH").length;
+  ok(homeIn(local) > homeIn(any), `preferring local gave ${homeIn(local)} Ohio schools against ${homeIn(any)} without it`);
+
+  /* Turning online off really removes them rather than reordering them. */
+  const campus = buildSlate(ohio, PROG, { includeOnline: false }).bands.flatMap((b) => b.rows);
+  ok(campus.every((c) => c.school.online !== 2), "campus-only still suggested an online university");
+  ok(campus.length > 0, "campus-only produced nothing at all");
+
+  /* A major with no federal field cannot say which schools run it, so it says
+     so rather than suggesting all 588. */
+  for (const majorId of ["undeclared", "honors"]) {
+    const s = buildSlate(withProfile({ majorId }), PROG);
+    ok(s.covered === false, `${majorId} should not be covered`);
+    ok(s.total > 0, `${majorId} should still suggest something, on odds and cost alone`);
+  }
+
+  /* Without the program tables at all, the pane degrades rather than breaking. */
+  const noData = buildSlate(withProfile({ majorId: "cs" }), null);
+  ok(noData.total > 0, "a slate built with no program data came out empty");
+  ok(noData.covered === false, "a slate built with no program data claimed coverage");
+
+  /* A stronger applicant should not be offered a weaker list: the top band of
+     a 4.0 should be at least as likely as the top band of a 2.4. */
+  const strong = buildSlate(withProfile({ majorId: "cs", gpa: 4.0 }), PROG).bands[0].rows;
+  const weak = buildSlate(withProfile({ majorId: "cs", gpa: 2.4 }), PROG).bands[0].rows;
+  const mean = (rows) => rows.reduce((t, c) => t + c.r.prob, 0) / rows.length;
+  ok(mean(strong) >= mean(weak) - 0.02, `a 4.0's safety band (${mean(strong).toFixed(2)}) is below a 2.4's (${mean(weak).toFixed(2)})`);
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);
