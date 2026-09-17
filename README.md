@@ -113,6 +113,12 @@ transferring from and your residency, your major and entry term — then straigh
 to **Best fits**, which is built from exactly those answers. It is skippable at
 every step and re-runnable from a link in the Record pane.
 
+**Setup questions** in the sidebar runs it again at any time, from any state,
+on any device — it is an action rather than a destination, so it sits below the
+rule at the bottom of the nav and never takes the current-page mark. There is
+also a link in the Record pane, though on a phone that pane is itself behind
+the drawer, which is why the sidebar entry exists.
+
 It opens unprompted only when you have not seen it before **and** your list is
 empty. Having seen it is the one permanent answer: it is setup, not a feature.
 An empty list is somebody who never got started, which is who it is for; a list

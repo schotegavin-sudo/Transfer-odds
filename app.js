@@ -1158,8 +1158,17 @@ setTab("list", { animate: false });
 syncProgramMajor();
 window.addEventListener("resize", () => setTab(currentTab, { animate: false }));
 
-document.querySelectorAll(".navitem").forEach((b) =>
+document.querySelectorAll(".navitem[data-tab]").forEach((b) =>
   b.addEventListener("click", () => { setTab(b.dataset.tab, { focus: true }); closeDrawer({ restoreFocus: false }); }));
+
+/* The questions are setup, so they run once and then stay out of the way —
+   which left no way back to them but a text link inside the record pane, and
+   on a phone that pane is itself behind this drawer. One tap, from anywhere,
+   in any state. */
+el("navwalk").addEventListener("click", () => {
+  closeDrawer({ restoreFocus: false });
+  startWalkthrough({ force: true });
+});
 el("footlinks").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tab]");
   if (b) setTab(b.dataset.tab, { focus: true });

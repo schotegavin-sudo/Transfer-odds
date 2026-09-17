@@ -881,6 +881,10 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
   #pane-fits > .rail-head { padding-right: 62px; }
 }
 
+/* An action rather than a destination: it never carries the current-page mark,
+   so it is set apart from the five items above it. */
+.navaction { margin-top: 6px; border-top: 1px solid var(--glass-edge); padding-top: 14px; border-radius: 0 0 var(--radius) var(--radius); }
+
 .linky {
   border: 0; background: none; padding: 0; cursor: pointer;
   font: inherit; color: var(--ink-2);
