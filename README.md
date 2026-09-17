@@ -125,6 +125,20 @@ walkthrough shipped had a record, so they were treated as already onboarded
 having never seen it. A record tells you whether somebody is mid-task, not
 whether they have been shown around.
 
+### Previewing the first run
+
+Add `?fresh` to the URL and the page behaves as though this browser had never
+been here: the walkthrough opens on every load, the answers start blank, and
+nothing is written to storage, so an existing record survives being previewed
+over. It is there so the first-run experience can be looked at repeatedly
+without clearing site data between goes, and it costs an ordinary visitor
+nothing — no build flag, no revert, no behaviour change for anyone who does not
+type it.
+
+```
+https://schotegavin-sudo.github.io/transfer-odds/?fresh
+```
+
 ## Best fits
 
 Where the walkthrough ends. The odds model knows what you can get into and the

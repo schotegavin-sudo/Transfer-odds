@@ -58,7 +58,13 @@ const INDEX = new Map(SCHOOLS.map((s) => [s.name, searchIndex(s, STATE_NAMES[s.s
 
 const KEY = "transfer-odds:v1";
 const SEEN_KEY = "transfer-odds:walkthrough:v1";
-const saved = load();
+/* ?fresh — the whole page behaves as though this browser had never been here:
+   the walkthrough runs on every load, the answers start blank, and nothing is
+   written to storage, so a real record survives being previewed over. It is
+   for looking at the first-run experience repeatedly without clearing site
+   data between goes, and it costs an ordinary visitor nothing. */
+const PREVIEW = new URLSearchParams(location.search).has("fresh");
+const saved = PREVIEW ? null : load();
 let profile = saved || structuredClone(BLANK);
 let viewingShared = false;
 
@@ -72,6 +78,10 @@ function load() {
   } catch { return null; }
 }
 function save() {
+  if (PREVIEW) {
+    el("savedstate").textContent = "preview — not saved";
+    return;
+  }
   try {
     localStorage.setItem(KEY, JSON.stringify(profile));
     el("savedstate").textContent = "saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -475,8 +485,12 @@ function resetBanner() {
   const b = el("banner");
   b.className = "hint";
   b.hidden = false;
-  b.innerHTML = `This record saves itself in this browser as you change it, and never leaves it.
-    <button type="button" class="linky" id="rewalk">Run the setup questions again</button>`;
+  b.innerHTML = PREVIEW
+    ? `<b>Preview mode.</b> This page is pretending you have never been here, and is saving nothing —
+       your real record is untouched. Drop <code>?fresh</code> from the address to go back to it.
+       <button type="button" class="linky" id="rewalk">Run the setup questions again</button>`
+    : `This record saves itself in this browser as you change it, and never leaves it.
+       <button type="button" class="linky" id="rewalk">Run the setup questions again</button>`;
   el("rewalk").addEventListener("click", () => startWalkthrough({ force: true }));
 }
 
@@ -1020,7 +1034,10 @@ function startWalkthrough({ force = false } = {}) {
 }
 
 function endWalkthrough({ finished } = {}) {
-  try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode — it just asks again */ }
+  /* In preview the point is to see it again, so it is never marked as seen. */
+  if (!PREVIEW) {
+    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode — it just asks again */ }
+  }
   wtScrim.classList.remove("open");
   wt.classList.remove("open");
   wtBehind.forEach((n) => n.removeAttribute("inert"));
@@ -1039,6 +1056,7 @@ function endWalkthrough({ finished } = {}) {
 }
 
 function seenWalkthrough() {
+  if (PREVIEW) return false;
   try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return true; }
 }
 
@@ -1212,3 +1230,4 @@ function flashExport(word) {
 }
 
 if (saved) el("savedstate").textContent = "record loaded";
+if (PREVIEW) el("savedstate").textContent = "preview — not saved";

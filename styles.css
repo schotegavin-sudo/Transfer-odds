@@ -542,7 +542,10 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 26px; }
 .method h3 { font-family: var(--ui); font-size: 0.875rem; font-weight: 700; margin-bottom: 4px; }
 .method p { margin: 0 0 14px; font-size: 0.8125rem; color: var(--ink-2); max-width: 60ch; }
-.method code { font-family: var(--mono); font-size: 0.7188rem; padding: 1px 5px; border-radius: 6px; background: var(--glass-edge); }
+/* Inline code reads the same wherever it appears. */
+.method code,
+.legaldoc code,
+.hint code { font-family: var(--mono); font-size: 0.7188rem; padding: 1px 5px; border-radius: 6px; background: var(--glass-edge); }
 .caution { border-left: 3px solid var(--reach); padding-left: 12px; }
 
 
@@ -671,7 +674,6 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .legaldoc ul { margin: 0 0 11px; padding-left: 20px; }
 .legaldoc li { margin: 3px 0; }
 .legaldoc b { color: var(--ink); }
-.legaldoc code { font-family: var(--mono); font-size: 0.7188rem; padding: 1px 5px; border-radius: 6px; background: var(--glass-edge); }
 
 /* ---------------------------------------------------------- walkthrough
  *
