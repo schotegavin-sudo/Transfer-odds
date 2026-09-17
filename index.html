@@ -1,0 +1,346 @@
+<title>Transfer Odds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+
+<div class="aurora" aria-hidden="true"><b></b><b></b><b></b></div>
+
+<header class="topbar glass">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">TO</span>
+    <div>
+      <h1>Transfer Odds</h1>
+      <p class="counts"><span id="dbcount">588</span> schools · <span id="majorcount">154</span> majors</p>
+    </div>
+  </div>
+  <button type="button" class="menubtn" id="menubtn" aria-label="Menu" aria-expanded="false" aria-controls="sidebar">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="menubtn-label">Menu</span>
+  </button>
+</header>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sidebar glass" id="sidebar" aria-label="Sections" tabindex="-1" inert>
+  <div class="sidebar-head">
+    <span class="mark" aria-hidden="true">TO</span>
+    <div>
+      <b>Transfer Odds</b>
+      <small><span id="dbcount2">588</span> schools · <span id="majorcount3">154</span> majors</small>
+    </div>
+    <button type="button" class="closebtn" id="closebtn" aria-label="Close menu">&times;</button>
+  </div>
+  <nav class="navlist">
+      <button type="button" class="navitem" data-tab="record" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="navtext"><b>Record</b><small>Your GPA, credits and major</small></span>
+      </button>
+      <button type="button" class="navitem" data-tab="list" aria-current="page">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="5" rx="2.5"/><rect x="3" y="14" width="12" height="5" rx="2.5"/></svg></span>
+        <span class="navtext"><b>My list</b><small>Your schools, ranked by odds</small></span>
+      </button>
+      <button type="button" class="navitem" data-tab="explore" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg></span>
+        <span class="navtext"><b>Explore</b><small>Search all 588 schools</small></span>
+      </button>
+      <button type="button" class="navitem" data-tab="method" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"/><path d="M4 16c4 0 4-9 8-9s4 6 8 6"/></svg></span>
+        <span class="navtext"><b>Method</b><small>How the number is produced</small></span>
+      </button>
+      <button type="button" class="navitem" data-tab="legal" aria-current="false">
+        <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h4"/></svg></span>
+        <span class="navtext"><b>Terms of use</b><small>Terms, privacy and notices</small></span>
+      </button>
+  </nav>
+  <p class="sidebar-foot">Your record is saved in this browser only. Nothing is sent anywhere.</p>
+</aside>
+
+<div class="shell">
+  <form class="pane glass" id="pane-record" autocomplete="off">
+    <div class="rail-head">
+      <h2>Your record</h2>
+      <span class="saved" id="savedstate">unsaved</span>
+    </div>
+    <p class="hint" id="banner">Loaded with an example record. Change anything and it becomes yours.</p>
+
+    <fieldset>
+      <legend>Academics</legend>
+      <div class="row2">
+        <div class="field"><label for="gpa">Cumulative GPA</label><input type="number" id="gpa" min="0" max="4.3" step="0.01" value="3.42"></div>
+        <div class="field"><label for="credits">Transferable hours</label><input type="number" id="credits" min="0" max="200" step="1" value="48"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="prereqs">Prerequisites</label>
+          <select id="prereqs">
+            <option value="all">All complete</option>
+            <option value="most" selected>Most complete</option>
+            <option value="few">Few or none</option>
+          </select>
+        </div>
+        <div class="field"><label for="blemish">Ws, repeats</label>
+          <select id="blemish">
+            <option value="0" selected>None</option>
+            <option value="1">One or two</option>
+            <option value="2">Several</option>
+            <option value="3">Probation</option>
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Where you are now</legend>
+      <div class="field"><label for="current">Current college</label><input type="text" id="current" value="Santa Monica College"></div>
+      <div class="row2">
+        <div class="field"><label for="curtype">Institution type</label>
+          <select id="curtype">
+            <option value="cc" selected>Community college</option>
+            <option value="four">Four-year college</option>
+            <option value="sel">Selective four-year</option>
+            <option value="online">Online / adult-serving</option>
+          </select>
+        </div>
+        <div class="field"><label for="state">Residency</label><select id="state"></select></div>
+      </div>
+      <div class="field"><label for="assoc">Associate degree</label>
+        <select id="assoc">
+          <option value="no">Not planned</option>
+          <option value="prog" selected>In progress</option>
+          <option value="yes">Completed</option>
+        </select>
+      </div>
+      <div class="chips"><label class="chip"><input type="checkbox" id="agreement"> Signed articulation / TAG agreement</label></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Where you are going</legend>
+      <div class="field">
+        <label for="major">Intended major</label>
+        <input type="text" id="major" list="majorlist" placeholder="Search 154 majors" spellcheck="false">
+        <datalist id="majorlist"></datalist>
+        <p class="majornote" id="majornote"></p>
+      </div>
+      <div class="field"><label for="term">Entry term</label>
+        <select id="term"><option value="fall" selected>Fall</option><option value="spring">Spring</option></select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>File strength</legend>
+      <div class="field"><label id="esslab">Essays and recommendations</label>
+        <span class="rating" role="group" aria-labelledby="esslab" id="essay"></span>
+      </div>
+      <div class="field"><label id="actlab">Activities, work, leadership</label>
+        <span class="rating" role="group" aria-labelledby="actlab" id="activity"></span>
+      </div>
+      <div class="chips" id="context"></div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="save">Save record</button>
+      <button type="button" class="btn" id="reset">Clear</button>
+      <button type="button" class="btn" id="share">Share link</button>
+      <button type="button" class="btn" id="export">Export CSV</button>
+    </div>
+    <div class="sharebox" id="sharebox" hidden>
+      <label for="shareurl">Your record, packed into a link</label>
+      <input type="text" id="shareurl" readonly spellcheck="false">
+      <p class="hint" id="sharenote"></p>
+    </div>
+    <p class="hint">Saved in this browser only. Nothing is sent anywhere.</p>
+  </form>
+
+  <div class="stage">
+    <section class="pane" id="pane-list" role="tabpanel" aria-label="My list">
+      <div class="hero glass" id="hero">
+        <div class="core" id="core">
+          <div class="core-sway">
+            <div class="core-3d" id="core3d">
+              <div class="core-ring" aria-hidden="true"></div>
+              <div class="core-ring r2" aria-hidden="true"></div>
+              <div class="core-ring r3" aria-hidden="true"></div>
+              <div class="core-dial" aria-hidden="true">
+                <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44"></circle><circle class="arc" id="arc" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="276.5"></circle></svg>
+              </div>
+              <div class="core-face">
+                <div class="num" id="corenum">—</div>
+                <div class="lab" id="corelab">best odds</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Strongest school on your list</p>
+          <h2 id="heroname">Add a school to begin</h2>
+          <p id="herocopy">Every school is scored against the pool you would actually compete with there: the transfer applicants to your major, at that campus, in that cycle.</p>
+        </div>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+      <section class="deadlines glass" id="deadlines" hidden></section>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section class="pane glass" id="pane-explore" role="tabpanel" aria-label="Explore" hidden>
+      <div class="tools">
+        <input type="search" id="q" placeholder="Search by name, nickname or state — UCLA, Cal, Ole Miss">
+        <select id="fsort">
+          <option value="chance">Best odds for me</option>
+          <option value="name">Name</option>
+          <option value="selective">Most selective</option>
+          <option value="state">State</option>
+        </select>
+        <select id="fstate"></select>
+        <select id="fcontrol">
+          <option value="">All control</option>
+          <option value="pub">Public</option>
+          <option value="pri">Private nonprofit</option>
+          <option value="prf">For-profit</option>
+        </select>
+        <select id="fonline">
+          <option value="">Campus + online</option>
+          <option value="2">Primarily online</option>
+          <option value="1">Has online division</option>
+          <option value="0">Campus based</option>
+        </select>
+        <select id="fsel">
+          <option value="">Any selectivity</option>
+          <option value="a">Under 20% transfer</option>
+          <option value="b">20–49%</option>
+          <option value="c">50–84%</option>
+          <option value="d">85% and up</option>
+        </select>
+      </div>
+      <p class="hint" style="padding:0 18px"><span id="dbshown"></span> — odds update as you type.</p>
+      <ul class="results" id="results"></ul>
+    </section>
+
+    <section class="pane glass method" id="pane-method" role="tabpanel" aria-label="Method" hidden>
+      <h2>How the number is produced</h2>
+      <div class="method-grid">
+        <div>
+          <h3>The pool, not the rate</h3>
+          <p>A school's transfer admit rate and the GPA its admitted transfers carry are enough to reconstruct the pool behind them. Admitting the top slice of a group lifts the admitted average by a known amount, so that arithmetic runs backwards: it recovers the average applicant, which is the person you are actually competing with.</p>
+          <h3>Your major sets the real rate</h3>
+          <p>The university rate is not the rate you face. Nursing and computer science admit a fraction of it and draw a stronger pool; classics and general studies admit above it. Each of the <span id="majorcount2">154</span> majors carries both effects, plus whether the department admits directly, caps clinical seats, or weighs a portfolio.</p>
+        </div>
+        <div>
+          <h3>Where your file lands</h3>
+          <p>Your GPA and your file are placed inside that pool as a percentile, and admission sits at the percentile the seats run out. Everything on the file is measured against the typical applicant there, not against an empty page: being in-state at a state flagship is worth nothing when most of the pool is in-state too. Each field contributes exactly one line, so nothing is counted twice.</p>
+          <h3>Read it as a bracket</h3>
+          <p class="caution"><code>P</code> marks a published transfer admit rate, <code>E</code> one estimated from selectivity. The model does not know which majors a campus offers, or this year's department caps. Admission turns on things no calculator sees. Confirm every rate, deadline, and credit cap with the school.</p>
+        </div>
+      </div>
+
+      <div class="legal">
+        <h3 id="about">What this is, and what it is not</h3>
+        <p><b>It is a planning estimate.</b> Every number on this page is modelled, not measured. No college publishes its transfer decisions at the applicant level, so nothing here is fitted to real outcomes — the model reconstructs each school's applicant pool from its published transfer admit rate and the GPA its admitted transfers carry, then places your record inside it. Treat a number as a bracket and a sanity check, never as a decision.</p>
+        <p><b>It is not affiliated with any college.</b> Institution names appear only to identify the schools the estimates describe. No school has reviewed, endorsed, or supplied anything here, and no logos or marks are used.</p>
+        <p><b>It is not advice.</b> Where you apply, what you major in, and what you spend on applications are your decisions. Confirm every admit rate, deadline, credit cap, and prerequisite with the school's own admissions office or its Common Data Set before you rely on it.</p>
+
+        <h3 id="privacy">Privacy</h3>
+        <p>Your record stays in your own browser's local storage. There is no account, no server, no database, and nothing is transmitted anywhere — the calculation runs entirely on your device. Clearing your browser data clears your record. The page loads its typefaces from Google Fonts, which is the only third-party request it makes.</p>
+
+        <h3 id="data">Where the numbers come from</h3>
+        <p>Each school carries one transfer admit rate and one admitted-transfer GPA. <code>P</code> marks a rate taken from a published transfer figure; <code>E</code> marks one estimated from overall selectivity and peer institutions. Both are approximations compiled for planning. Corrections are welcome and easy to apply — the reference table is a plain text file.</p>
+      </div>
+    </section>
+
+    <section class="pane glass method" id="pane-legal" role="tabpanel" aria-label="Terms of use" hidden>
+      <h2>Terms, privacy and notices</h2>
+      <nav class="docnav">
+        <a class="chip" href="#terms">Terms of use</a>
+        <a class="chip" href="#privacy">Privacy</a>
+        <a class="chip" href="#notices">Notices</a>
+      </nav>
+
+      <article class="legaldoc" id="terms" data-doc="terms" data-title="Terms of use">
+        <h3>Terms of use</h3>
+        <p class="updated">Last updated 16 September 2026</p>
+        <p>Transfer Odds is a free, non-commercial tool published by an individual. By using it you agree to what follows. If you do not agree, do not use it.</p>
+
+        <h4>1. What the service is</h4>
+        <p>Transfer Odds estimates the likelihood that a transfer applicant with a given academic record would be admitted to a given college. <b>Every number it produces is modelled, not measured.</b> No college publishes transfer admission decisions at the applicant level, so nothing here is fitted to real outcomes. The model reconstructs each school's applicant pool from its published transfer admit rate and the grade point average its admitted transfers carry, then places the record you enter inside that pool. Estimates are planning aids. They are not predictions, guarantees, or statements of fact about any admission decision.</p>
+
+        <h4>2. Not advice</h4>
+        <p>Nothing here is educational, financial, legal or professional advice, and using it creates no advisory relationship. Where you apply, what you study and what you spend on applications are your decisions. Verify every admit rate, deadline, credit cap, prerequisite and policy with the institution's own admissions office or its current Common Data Set before relying on it.</p>
+
+        <h4>3. Accuracy</h4>
+        <p>The reference tables carry one transfer admit rate and one admitted-transfer grade point average per institution. Rates marked <code>P</code> come from published transfer figures; rates marked <code>E</code> are estimated from overall selectivity and peer institutions. Both are approximations, both go out of date, and both may simply be wrong. The site does not know which majors a given campus offers, nor this year's departmental caps. Corrections are welcome.</p>
+
+        <h4>4. No affiliation with any institution</h4>
+        <p>College and university names appear only to identify the institutions the estimates describe. No institution has reviewed, endorsed, sponsored or supplied anything here. No logos, crests, seals or mascots are used. Any trademarks referenced remain the property of their owners.</p>
+
+        <h4>5. No warranty</h4>
+        <p>The service is provided <b>“as is” and “as available”, without warranty of any kind</b>, express or implied, including without limitation any warranty of accuracy, merchantability, fitness for a particular purpose, or non-infringement. It may be changed, interrupted or withdrawn at any time without notice.</p>
+
+        <h4>6. Limitation of liability</h4>
+        <p>To the fullest extent permitted by law, the publisher shall not be liable for any indirect, incidental, special, consequential or exemplary damages, or for any loss of opportunity, admission, tuition, application fees, time or data, arising out of or relating to your use of or reliance on this service — whether or not the possibility of such damages was known. Some jurisdictions do not allow certain exclusions, in which case they apply to the maximum extent permitted.</p>
+
+        <h4>7. Acceptable use</h4>
+        <ul>
+          <li>Do not present these estimates as official figures from any institution.</li>
+          <li>Do not resell the service or charge for access to it as a paid advisory product.</li>
+          <li>Do not attempt to disrupt the site or the people using it.</li>
+        </ul>
+        <p>The source code is published under the MIT License, which permits reuse and modification on its own terms. Those terms govern the code; this section governs use of the hosted site.</p>
+
+        <h4>8. Minors</h4>
+        <p>The site is intended for prospective transfer students, who are generally adults. It collects no personal information from anyone, of any age. If you are under 13, ask a parent or guardian before using it.</p>
+
+        <h4>9. Changes</h4>
+        <p>These terms may be updated. The date above says when they last were. Continuing to use the site after a change means you accept the revised terms.</p>
+
+        <h4>10. Contact</h4>
+        <p>Questions, corrections and takedown requests: <a href="mailto:REPLACE@EXAMPLE.COM">REPLACE@EXAMPLE.COM</a></p>
+      </article>
+
+      <article class="legaldoc" id="privacy" data-doc="privacy" data-title="Privacy">
+        <h3>Privacy</h3>
+        <p class="updated">Last updated 16 September 2026</p>
+        <p><b>This site collects nothing.</b> There is no account, no server, no database, no analytics, no advertising, no tracking pixel and no cookie. The calculation runs entirely inside your browser, on your device. Nothing you type is transmitted anywhere, because there is nowhere for it to go.</p>
+
+        <h4>What is stored, and where</h4>
+        <p>When you press <b>Save record</b>, your record — grade point average, credits, college, residency, major, entry term, self-ratings and your school list — is written to your browser's <b>local storage</b> under the key <code>transfer-odds:v1</code>. Local storage lives on your own device. It is not a cookie, it is never sent with a network request, and no one else can read it, including the publisher.</p>
+        <p>To erase it: press <b>Clear</b> on the record panel, or clear site data for this domain in your browser settings. A private or incognito window keeps nothing after you close it.</p>
+        <p>Under the ePrivacy Directive and comparable rules, storage a user explicitly asks for — here, saving your own record by pressing a button labelled Save — is strictly necessary for the function requested and needs no consent banner. That is the only storage this site performs.</p>
+
+        <h4>Third parties</h4>
+        <p><b>There are none.</b> The typefaces are served from this site's own origin rather than from a font CDN, so your browser makes no request to any third party while using the site, and no third party ever sees your address through it.</p>
+
+        <h4>Server logs</h4>
+        <p>The site is static files on a hosting provider. Like any web host, that provider may record standard request logs — address, timestamp, page requested, user agent — for delivery, security and abuse prevention. The publisher does not analyse those logs to identify or profile visitors.</p>
+
+        <h4>Your record is yours</h4>
+        <p>Because nothing is collected, there is nothing to request, correct, export or delete from anyone else's systems — the rights you hold under the GDPR, the UK GDPR, the CCPA and similar laws have no data here to attach to. The export button writes a file to your own machine. Nothing is ever sold or shared, because nothing is ever received.</p>
+
+        <h4>If this ever changes</h4>
+        <p>If analytics, accounts or any other data collection are added later, this page will be rewritten before that ships and the date above will change. Any analytics adopted will be cookieless and aggregate.</p>
+      </article>
+
+      <article class="legaldoc" id="notices" data-doc="notices" data-title="Notices and attributions">
+        <h3>Notices and attributions</h3>
+
+        <h4>This project</h4>
+        <p>The code is © 2026 Gavin Schote, released under the MIT License.</p>
+
+        <h4>The reference tables</h4>
+        <p>The tables are compilations of factual figures — admit rates, grade point averages, credit caps. In the United States facts are not copyrightable (<i>Feist Publications v. Rural Telephone Service</i>, 499 U.S. 340), so the numbers themselves are free for anyone to use. Nothing here was copied from a licensed database. Figures marked <code>P</code> come from institutions' own published transfer statistics and Common Data Set filings; figures marked <code>E</code> are estimates derived from overall selectivity. The authoritative public source for verification is IPEDS, published by the US Department of Education and in the public domain.</p>
+
+        <h4>Institution names</h4>
+        <p>College and university names appear solely to identify the institutions the estimates describe. This is nominative use. No institution has reviewed, endorsed, sponsored or supplied anything in this project, and no logos, crests, seals or mascots are reproduced.</p>
+
+        <h4>Fonts</h4>
+        <p>Poppins (© Indian Type Foundry, Jonny Pinhorn), Plus Jakarta Sans (© Tokotype) and JetBrains Mono (© JetBrains s.r.o.) are licensed under the SIL Open Font License, Version 1.1, and are served from this site's own origin.</p>
+      </article>
+    </section>
+  </div>
+</div>
+
+<footer class="siteft">
+  <span>Transfer Odds — a planning tool, not a prediction.</span>
+  <span id="footlinks"><button type="button" class="linky" data-tab="method">About the model</button> · <button type="button" class="linky" data-tab="legal">Terms &amp; privacy</button></span>
+</footer>
+
+
+<script type="module" src="app.js"></script>

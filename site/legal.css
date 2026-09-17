@@ -1,0 +1,15 @@
+.brandname { font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: -.02em; }
+/* Shared by terms.html and privacy.html. */
+.doc { max-width: 1240px; margin: 26px auto 0; padding: 0 16px 120px; }
+.doc .glass { padding: 34px 38px; }
+.doc h1 { font-family: var(--display); font-size: clamp(26px, 4vw, 36px); margin-bottom: 6px; }
+.doc .updated { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 22px; }
+.doc h2 { font-family: var(--ui); font-size: 16px; font-weight: 700; margin: 26px 0 6px; }
+.doc p, .doc li { font-size: 14px; color: var(--ink-2); max-width: 70ch; }
+.doc p { margin: 0 0 12px; }
+.doc ul { margin: 0 0 12px; padding-left: 20px; }
+.doc li { margin: 4px 0; }
+.doc strong { color: var(--ink); }
+.doc a { color: var(--accent); }
+.doc .back { display: inline-block; margin-bottom: 20px; font-size: 13px; font-weight: 600; text-decoration: none; }
+@media (max-width: 620px) { .doc .glass { padding: 24px 20px; } }
