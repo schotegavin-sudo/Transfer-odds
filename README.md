@@ -44,12 +44,19 @@ drawer and takes its own column, so a wide monitor shows the whole tool at once
 with no navigation at all. Past 1900px things get roomier rather than wider,
 and past 2400px the page stops growing and the margins are margins.
 
-The menu is a 44px translucent tile set into the top right of the bar, and the
-drawer slides out from that same edge on one axis. It is parked off-screen
-rather than hidden, because flipping `visibility` makes the browser defer the
-first frame — precisely the frame where the movement has to read — and it is
-opaque rather than frosted, because blurring a full-height panel costs those
-same frames.
+The drawer and its handle are one object. `#sidebar` is a shell parked one full
+width off the right edge of the screen; the handle is absolutely positioned at
+`left: -46px` inside it, so when the shell is parked the handle is the only part
+still on screen, flush against the edge with its right corners square — that
+side is a cut, not an edge, because the object continues past it. Opening
+translates the shell, and the handle travels with it because it is part of it.
+Nothing has to be kept in sync, because nothing is separate.
+
+The shell is parked rather than hidden: flipping `visibility` makes the browser
+defer the first frame, which is precisely the frame where the movement has to
+read. `inert` sits on the inner body so the handle stays clickable while the
+rest of the drawer is out of the tab order, and the body is opaque rather than
+frosted because blurring a full-height panel costs those same frames.
 
 Motion is rationed by how often you trigger it. The odds core animates on every
 keystroke because a dial sliding to a new value *is* the feedback. The form and

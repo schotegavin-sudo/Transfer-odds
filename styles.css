@@ -543,27 +543,34 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 
 
 /* ------------------------------------------------------------- sidebar */
-/* A small translucent tile, set in from the edge it opens from. */
+/* The handle. It is the visible edge of the drawer — the drawer is one object
+   that lives mostly off-screen, and this is the part that sticks out. It rides
+   on the drawer's left edge, so when the drawer slides in the handle travels
+   with it; nothing needs to be kept in sync because nothing is separate.
+   Its right side meets the screen edge square, because that side is a cut, not
+   an edge: the rest of the object continues past it. */
 .menubtn {
-  margin-left: auto;
-  flex: none;
+  position: absolute;
+  left: calc(var(--handle) * -1);
+  top: 88px;
+  width: var(--handle);
+  height: 52px;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
   border: 1px solid var(--glass-line);
-  border-radius: var(--radius-sm);
+  border-right: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
   color: var(--ink);
-  background: var(--glass-strong);
-  backdrop-filter: blur(8px) saturate(115%);
-  -webkit-backdrop-filter: blur(8px) saturate(115%);
-  box-shadow: 0 1px 2px rgba(22, 23, 26, .06);
+  background: var(--surface-solid);
+  box-shadow: -6px 0 18px -10px rgba(22, 23, 26, .45);
   cursor: pointer;
-  transition: transform var(--swift), background var(--swift), border-color var(--swift);
+  pointer-events: auto;
+  transition: background var(--swift), color var(--swift);
 }
-.menubtn:hover { transform: translateY(-1px); border-color: var(--ink-3); }
-.menubtn:active { transform: translateY(1px) scale(.96); background: var(--clay-2); }
-.bars { display: grid; gap: 4px; width: 17px; }
+.menubtn:hover { background: var(--clay-2); }
+.menubtn:active { background: var(--glass-edge); }
+.menubtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--radius) 0 0 var(--radius); }
+.bars { display: grid; gap: 4px; width: 16px; }
 .bars i { height: 2px; border-radius: 2px; background: currentColor; transition: transform var(--glide), opacity var(--swift); }
 .menubtn[aria-expanded="true"] .bars i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .menubtn[aria-expanded="true"] .bars i:nth-child(2) { opacity: 0; }
@@ -587,53 +594,34 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(340px, 86vw);
-  padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+  width: min(340px, 82vw);
+  --handle: 46px;
+  /* Parked one full width to the right: everything but the handle is past the
+     edge of the screen. Opening slides the whole object, handle included. */
+  transform: translateX(100%);
+  pointer-events: none;
+  transition: transform 380ms cubic-bezier(.32, .72, 0, 1);
+}
+.sidebar.open { transform: translateX(0); transition: transform 420ms cubic-bezier(.22, 1, .3, 1); }
+
+.drawer-body {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-  border-right: 0;
-  /* Closed, it sits just off the left edge of the screen. Opening is a plain
-     slide along one axis — no rotation, no scaling, nothing to read as a
-     flicker — so it behaves like a drawer being pulled out. */
-  /* Solid, not frosted. Blurring a full-height panel costs the first frames
-     of the slide, which is exactly when the movement has to read. The scrim
-     already separates it from the page. */
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
   background: var(--surface-solid);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  /* Parked off-screen rather than hidden. A visibility flip makes the browser
-     defer the first frame, which ate the opening slide; an element that is
-     always rendered starts moving on the frame you ask it to. `inert` on the
-     markup keeps it out of the tab order and the accessibility tree. */
-  transform: translateX(102%);
-  pointer-events: none;
-  transition: transform 380ms cubic-bezier(.32, .72, 0, 1);
+  border-left: 1px solid var(--glass-line);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.sidebar::before { content: none; }
-.sidebar.open {
-  transform: translateX(0);
-  pointer-events: auto;
-  transition: transform 420ms cubic-bezier(.22, 1, .3, 1);
-}
+.sidebar.open .drawer-body { pointer-events: auto; }
+
 .sidebar-head { display: flex; align-items: center; gap: 12px; }
 .sidebar-head b { display: block; font-family: var(--display); font-size: 0.9375rem; font-weight: 600; }
 .sidebar-head small { display: block; font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); margin-top: 2px; }
-.closebtn {
-  margin-left: auto;
-  width: 34px; height: 34px;
-  border: 0; border-radius: 11px;
-  font-size: 1.25rem; line-height: 1;
-  color: var(--ink-2);
-  background: var(--clay);
-  box-shadow: var(--clay-shadow);
-  cursor: pointer;
-}
-.closebtn:active { box-shadow: var(--clay-pressed); }
-
 .navlist { display: grid; gap: 7px; }
 .navitem {
   display: flex;
@@ -689,8 +677,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .linky:hover { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar { transition: none; transform: translateX(102%); }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar { transition: none; }
 }
 
 /* ----------------------------------------------------- reduced motion */

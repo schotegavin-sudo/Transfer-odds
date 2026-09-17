@@ -549,7 +549,7 @@ function setTab(name, { animate = true, focus = false } = {}) {
   }
 }
 
-const sidebar = el("sidebar"), scrim = el("scrim"), menubtn = el("menubtn");
+const sidebar = el("sidebar"), body = el("drawerbody"), scrim = el("scrim"), menubtn = el("menubtn");
 let drawerOpen = false;
 
 function openDrawer() {
@@ -557,9 +557,9 @@ function openDrawer() {
   scrim.hidden = false;
   requestAnimationFrame(() => scrim.classList.add("open"));
   sidebar.classList.add("open");
-  sidebar.removeAttribute("inert");
+  body.removeAttribute("inert");
   menubtn.setAttribute("aria-expanded", "true");
-  (sidebar.querySelector('.navitem[aria-current="page"]') || sidebar.querySelector(".navitem"))?.focus();
+  (body.querySelector('.navitem[aria-current="page"]') || body.querySelector(".navitem"))?.focus();
 }
 
 function closeDrawer({ restoreFocus = true } = {}) {
@@ -567,7 +567,7 @@ function closeDrawer({ restoreFocus = true } = {}) {
   drawerOpen = false;
   scrim.classList.remove("open");
   sidebar.classList.remove("open");
-  sidebar.setAttribute("inert", "");
+  body.setAttribute("inert", "");
   menubtn.setAttribute("aria-expanded", "false");
   const hide = () => { if (!drawerOpen) scrim.hidden = true; };
   reduced.matches ? hide() : setTimeout(hide, 560);
@@ -575,7 +575,7 @@ function closeDrawer({ restoreFocus = true } = {}) {
 }
 
 menubtn.addEventListener("click", () => (drawerOpen ? closeDrawer() : openDrawer()));
-el("closebtn").addEventListener("click", () => closeDrawer());
+
 scrim.addEventListener("click", () => closeDrawer());
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && drawerOpen) closeDrawer();
@@ -583,7 +583,7 @@ document.addEventListener("keydown", (e) => {
 /* Keep the tab key inside the drawer while it covers the page. */
 sidebar.addEventListener("keydown", (e) => {
   if (e.key !== "Tab" || !drawerOpen) return;
-  const items = [...sidebar.querySelectorAll("button")];
+  const items = [menubtn, ...body.querySelectorAll("button")];
   const first = items[0], last = items[items.length - 1];
   if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }

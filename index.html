@@ -14,20 +14,20 @@
       <p class="counts"><span id="dbcount">588</span> schools · <span id="majorcount">154</span> majors</p>
     </div>
   </div>
-  <button type="button" class="menubtn" id="menubtn" aria-label="Menu" aria-expanded="false" aria-controls="sidebar">
-    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
-  </button>
 </header>
 
 <div class="scrim" id="scrim" hidden></div>
-<aside class="sidebar glass" id="sidebar" aria-label="Sections" tabindex="-1" inert>
+<aside class="sidebar" id="sidebar" aria-label="Sections">
+  <button type="button" class="menubtn" id="menubtn" aria-label="Menu" aria-expanded="false" aria-controls="drawerbody">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
+  <div class="drawer-body" id="drawerbody" tabindex="-1" inert>
   <div class="sidebar-head">
     <span class="mark" aria-hidden="true">TO</span>
     <div>
       <b>Transfer Odds</b>
       <small><span id="dbcount2">588</span> schools · <span id="majorcount3">154</span> majors</small>
     </div>
-    <button type="button" class="closebtn" id="closebtn" aria-label="Close menu">&times;</button>
   </div>
   <nav class="navlist">
       <button type="button" class="navitem" data-tab="record" aria-current="false">
@@ -52,6 +52,7 @@
       </button>
   </nav>
   <p class="sidebar-foot">Your record is saved in this browser only. Nothing is sent anywhere.</p>
+  </div>
 </aside>
 
 <div class="shell">
