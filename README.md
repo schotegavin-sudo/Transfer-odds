@@ -27,11 +27,28 @@ loads `app.js` as an ES module.
 ## The interface
 
 Two material systems, kept apart on purpose. **Glass** is what you look
-through — panels, the top bar, school cards: translucent, blurred, lit by a
-specular highlight that follows the pointer. **Clay** is what you push —
-buttons, chips, tiles, the odds core: opaque, puffy, dual inner shadow,
-pressing down on `:active`. A control is never both; that single rule is what
-keeps the two readable side by side.
+through — panels, the top bar, school cards: lightly frosted, a hairline edge,
+one soft shadow. **Clay** is what you push — buttons, chips, tiles, the odds
+core: opaque, gently raised, pressing down on `:active`. A control is never
+both; that single rule is what keeps the two readable side by side.
+
+The palette is deliberately neutral. Warm greys carry the whole interface and
+the only saturated colour on the page is the four tier colours, which mean
+something — nothing decorative competes with them.
+
+**Sizing is fluid, not stepped.** The page is as wide as the monitor usefully
+allows and the type scales with it (`html` carries a `clamp()` and every font
+size is in `rem`). Below 1000px the record panel is a drawer section; above it
+the record stays beside the results; past 1500px the search panel leaves the
+drawer and takes its own column, so a wide monitor shows the whole tool at once
+with no navigation at all. Past 1900px things get roomier rather than wider,
+and past 2400px the page stops growing and the margins are margins.
+
+The navigation drawer slides in from the left edge on one axis. It is parked
+off-screen rather than hidden, because flipping `visibility` makes the browser
+defer the first frame — which is precisely the frame where the movement has to
+read — and it is opaque rather than frosted, because blurring a full-height
+panel costs those same frames.
 
 Motion is rationed by how often you trigger it. The odds core animates on every
 keystroke because a dial sliding to a new value *is* the feedback. The form and

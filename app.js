@@ -103,7 +103,7 @@ function buildStatic() {
   el("majorcount").textContent = MAJORS.length;
   el("majorcount2").textContent = MAJORS.length;
   el("major").placeholder = `Search ${MAJORS.length} majors`;
-  el("q").placeholder = `Search ${SCHOOLS.length} schools by name, state, or “online”`;
+  el("q").placeholder = "Search by name, nickname or state";
 
   const opts = STATES.map((s) => `<option value="${s}">${STATE_NAMES[s] || s}</option>`).join("");
   el("state").innerHTML = opts;
@@ -519,12 +519,19 @@ let currentTab = "list";
 function setTab(name, { animate = true, focus = false } = {}) {
   if (!PANES[name]) return;
   currentTab = name;
-  const wide = window.matchMedia("(min-width: 1001px)").matches;
+  const wide = window.matchMedia("(min-width: 1000px)").matches;
+  /* Past this width the search panel has its own column, so choosing either
+     "My list" or "Explore" shows both — there is nothing to switch between. */
+  const threeCol = window.matchMedia("(min-width: 1500px)").matches;
+  const sideBySide = threeCol && (name === "list" || name === "explore");
   for (const [key, id] of Object.entries(PANES)) {
     const node = el(id);
     /* The record rail is always up beside the results on a wide screen, so
        asking for it there just means "look left", not "swap the view". */
-    const show = key === name || (wide && key === "record") || (wide && name === "record" && key === "list");
+    const show = key === name
+      || (wide && key === "record")
+      || (wide && name === "record" && key === "list")
+      || (sideBySide && (key === "list" || key === "explore"));
     node.hidden = !show;
     if (show && animate && !reduced.matches) {
       node.style.animation = "none";

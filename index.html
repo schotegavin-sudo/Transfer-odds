@@ -183,27 +183,27 @@
 
     <section class="pane glass" id="pane-explore" role="tabpanel" aria-label="Explore" hidden>
       <div class="tools">
-        <input type="search" id="q" placeholder="Search by name, nickname or state — UCLA, Cal, Ole Miss">
-        <select id="fsort">
+        <input type="search" id="q" aria-label="Search schools" placeholder="Search by name, nickname or state">
+        <select id="fsort" aria-label="Sort schools by">
           <option value="chance">Best odds for me</option>
           <option value="name">Name</option>
           <option value="selective">Most selective</option>
           <option value="state">State</option>
         </select>
-        <select id="fstate"></select>
-        <select id="fcontrol">
+        <select id="fstate" aria-label="Filter by state"></select>
+        <select id="fcontrol" aria-label="Filter by control">
           <option value="">All control</option>
           <option value="pub">Public</option>
           <option value="pri">Private nonprofit</option>
           <option value="prf">For-profit</option>
         </select>
-        <select id="fonline">
+        <select id="fonline" aria-label="Filter by campus or online">
           <option value="">Campus + online</option>
           <option value="2">Primarily online</option>
           <option value="1">Has online division</option>
           <option value="0">Campus based</option>
         </select>
-        <select id="fsel">
+        <select id="fsel" aria-label="Filter by selectivity">
           <option value="">Any selectivity</option>
           <option value="a">Under 20% transfer</option>
           <option value="b">20–49%</option>
