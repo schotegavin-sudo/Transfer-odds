@@ -158,20 +158,30 @@ its reasons in plain sentences:
    one with real evidence purely by having none.
 3. **What it costs to carry.** Median debt at graduation per dollar of
    first-year pay.
-4. **Where you can go.** Residency is a yes or no question — you can afford to
-   leave the state or you cannot — so it is answered as one. *Only schools in
-   my state* (the default) offers nothing outside it, however strong; in-state
-   publics still rank above in-state privates, since cost is the difference
-   left once residency is settled. *Anywhere in the country* stops counting
-   residency rather than counting it against you. The ordering is identical
-   either way, and the line above the list says how many of the state's
-   programs in the major you are seeing.
+4. **Where you can go.** Three settings, because whether you can leave your
+   state is not something this app can work out for you.
 
-   This started as a ranking weight, and a weight cannot be trusted to do what
-   a label promises: at 0.22 against a national field it showed an Oregon
-   applicant one of their eight Oregon programs. Reserving places in each band
-   fixed the numbers and still left a control that sometimes did the thing and
-   sometimes did not, which is why it is now a filter.
+   | | what it does |
+   | --- | --- |
+   | **Only schools in my state** (default) | offers nothing outside it, however strong |
+   | **Prefer my state, but show others** | holds half the list for it; the rest of the country competes for what is left |
+   | **Anywhere in the country** | stops counting residency rather than counting it against you |
+
+   In-state publics rank above in-state privates under all three, since cost is
+   the difference left once residency is settled, and the bands and the ranking
+   are identical throughout — the setting decides who is eligible, not how they
+   are ordered.
+
+   The held places under *prefer* are counted across the whole list rather than
+   per band, because a state's programs do not spread evenly across your odds:
+   Idaho's four computer science departments are all safeties, and a per-band
+   quota of two handed the other two places away while two Idaho options sat
+   unused. It is a floor rather than a ceiling — the ordinary ranking adds more
+   wherever they earn it, and an Ohio nursing list comes out three quarters Ohio.
+
+   Residency began as a ranking weight, which cannot be trusted to do what a
+   label promises: at 0.22 against a national field it showed an Oregon
+   applicant one of their eight Oregon programs.
 
 5. **A spread, not a pile.** Odds sort candidates into bands and the list is
    filled from each — four you should get into, four live chances, a few

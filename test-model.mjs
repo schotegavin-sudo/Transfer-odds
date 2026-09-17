@@ -471,7 +471,7 @@ await section("Best fits", async () => {
         profiles.push(withProfile({ state, majorId, gpa }));
 
   /* Every filter holds under every combination, not just on its own. */
-  for (const scope of ["state", "any"]) {
+  for (const scope of ["state", "prefer", "any"]) {
     for (const includeOnline of [true, false]) {
       for (const majorId of ["nursing", "cs", "psych"]) {
         const p = withProfile({ state: "OH", majorId, gpa: 3.3 });
@@ -526,34 +526,49 @@ await section("Best fits", async () => {
         ok(c.r.prob >= band.min && c.r.prob < band.max, `${where}: ${c.school.name} at ${c.r.prob} is in the ${band.key} band`);
   }
 
-  /* Residency, across every state and several majors. It is a hard filter, so
-     the assertions are absolute: no exception is acceptable at any size. */
+  /* Residency, across every state and several majors. Three settings, each
+     asserted against what its own label promises. */
   const states = [...new Set(SCHOOLS.map((s) => s.state))];
   for (const state of states) {
     for (const majorId of ["nursing", "cs", "bizadmin"]) {
       const p = withProfile({ state, majorId, gpa: 3.3 });
       const where = `${state}/${majorId}`;
 
+      /* "Only" admits no exception at any size, and drops nothing it could
+         have shown. */
       const inState = buildSlate(p, PROG, { scope: "state" });
-      const rows = inState.bands.flatMap((b) => b.rows);
-      for (const c of rows)
-        ok(c.school.state === state, `${where}: in-state only offered ${c.school.name} in ${c.school.state}`);
+      for (const c of inState.bands.flatMap((b) => b.rows))
+        ok(c.school.state === state, `${where}: "only" offered ${c.school.name} in ${c.school.state}`);
       ok(inState.homeShown === inState.total, `${where}: ${inState.homeShown} in state of ${inState.total}`);
-      /* Nothing is dropped that could have been shown: with a hard filter the
-         list is every in-state candidate, up to the size of the list. */
       ok(inState.total === Math.min(inState.homeAvailable, 12),
-        `${where}: showed ${inState.total} of ${inState.homeAvailable} in-state candidates`);
+        `${where}: "only" showed ${inState.total} of ${inState.homeAvailable} in-state candidates`);
 
-      /* Widening never loses anything, and the bands still sort the same way. */
+      /* "Prefer" reaches its floor — half the list, or everything the band
+         shape can hold, whichever is smaller — and never does worse than not
+         preferring at all. */
+      const prefer = buildSlate(p, PROG, { scope: "prefer" });
+      const floor = Math.min(prefer.homeReachable, Math.ceil(12 / 2));
+      ok(prefer.homeShown >= floor,
+        `${where}: "prefer" showed ${prefer.homeShown} in state, but ${floor} were reachable (${prefer.homeAvailable} available)`);
+
       const any = buildSlate(p, PROG, { scope: "any" });
-      ok(any.total >= inState.total, `${where}: widening the search returned fewer schools`);
-      for (const s2 of [inState, any]) {
+      ok(prefer.homeShown >= any.homeShown,
+        `${where}: preferring gave ${prefer.homeShown} in state, not preferring gave ${any.homeShown}`);
+      /* The three sit in the order their labels imply. */
+      ok(inState.homeShown >= prefer.homeShown || inState.total < prefer.total,
+        `${where}: "only" showed fewer in-state than "prefer" without returning a shorter list`);
+
+      /* Under every setting the bands still sort the way they claim, and the
+         count the pane prints is the count on the page. */
+      for (const s2 of [inState, prefer, any]) {
         for (const band of s2.bands)
           for (const c of band.rows)
             ok(c.r.prob >= band.min && c.r.prob < band.max,
               `${where}: ${c.school.name} at ${c.r.prob} sits outside the ${band.key} band`);
         ok(s2.homeShown === s2.bands.flatMap((b) => b.rows).filter((c) => c.school.state === state).length,
           `${where}: the in-state count disagrees with the rows`);
+        ok(s2.total === new Set(s2.bands.flatMap((b) => b.rows).map((c) => c.school.name)).size,
+          `${where}: a school appears twice`);
       }
     }
   }

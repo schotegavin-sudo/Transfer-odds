@@ -333,7 +333,7 @@ function renderFits() {
     el("fitscopenote").textContent = "";
     node.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:12px 18px">
       ${slate.scope === "state"
-        ? `No school in ${esc(STATE_NAMES[profile.state] || profile.state)} in this database runs <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Switch to <b>anywhere in the country</b> above to see schools outside the state.`
+        ? `No school in ${esc(STATE_NAMES[profile.state] || profile.state)} in this database runs <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Switch to <b>prefer my state</b> or <b>anywhere in the country</b> above to see schools outside it.`
         : slate.covered
         ? `No school in this database reported bachelor's degrees in <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Widen them above, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`
         : `<b>${esc(major ? major.name : profile.majorId)}</b> has no bachelor's field of its own in the federal data, so there is no way to tell which schools run it. Pick a nearer major in your record, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`}
@@ -371,9 +371,30 @@ function renderScopeNote() {
     return;
   }
   const n = slate.homeAvailable;
-  node.textContent = `Showing ${where} only — ${slate.total} of the ${n} school${n === 1 ? "" : "s"} there that ${n === 1 ? "runs" : "run"} this major`
-    + (slate.total < n ? `, the strongest at each level of reach.` : `.`)
-    + (slate.total < 6 ? ` Switch to anywhere in the country above for a wider list.` : "");
+  const run = n === 1 ? "runs" : "run";
+  if (slate.scope === "state") {
+    node.textContent = `Showing ${where} only — ${slate.total} of the ${n} school${n === 1 ? "" : "s"} there that ${run} this major`
+      + (slate.total < n ? `, the strongest at each level of reach.` : `.`)
+      + (slate.total < 6 ? ` Switch to preferring ${where} above to fill the list out with schools elsewhere.` : "");
+    return;
+  }
+  const away = slate.total - slate.homeShown;
+  node.textContent = n === 0
+    ? `No school in ${where} in this database runs this major, so every suggestion is from elsewhere.`
+    : away === 0
+      ? `All ${slate.total} are in ${where}.`
+      : `${slate.homeShown} of ${slate.total} ${slate.homeShown === 1 ? "is" : "are"} in ${where}, from the ${n} there that ${run} this major. The other ${away} ${away === 1 ? "is" : "are"} from elsewhere because ${reasonAway(slate, where)}.`;
+}
+
+/* Why a preferred list is not entirely local. Three different things can be
+   true and they are not interchangeable — saying the state had nothing more
+   when it had thirty more would be a plain untruth. */
+function reasonAway(slate, where) {
+  if (slate.homeAvailable <= slate.homeShown) return `${where} has no more`;
+  if (slate.homeShown >= slate.homeReachable) {
+    return `the rest of ${where} sits at a level of reach this list is already full on`;
+  }
+  return `past the half held for ${where}, schools elsewhere ranked higher on the programs`;
 }
 
 function fitRow(c) {
