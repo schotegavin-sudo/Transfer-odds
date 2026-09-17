@@ -18,7 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
 const site = join(here, "site");
 
-const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/transfer-odds").replace(/\/$/, "");
+const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/Transfer-odds").replace(/\/$/, "");
 const TITLE = "Transfer Odds — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
