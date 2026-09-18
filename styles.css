@@ -885,6 +885,8 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
    so it is set apart from the five items above it. */
 .navaction { margin-top: 6px; border-top: 1px solid var(--glass-edge); padding-top: 14px; border-radius: 0 0 var(--radius) var(--radius); }
 
+.field > label .optional { font-weight: 500; color: var(--ink-3); }
+
 .linky {
   border: 0; background: none; padding: 0; cursor: pointer;
   font: inherit; color: var(--ink-2);

@@ -145,7 +145,49 @@ type it.
 https://schotegavin-sudo.github.io/transfer-odds/?fresh
 ```
 
-### Does a school run the major at all
+### Cost and completion
+
+The odds model says whether you can get in and the program tables say whether
+it is worth getting into. Neither says what it costs or whether people finish.
+
+**Net price** is the published price minus the grant aid students actually
+received, and it is nothing like the sticker: Harvard's list price is $61,676
+and its net price is $2,091 for a household earning $48–75k and $53,337 above
+$110k. Quoting one average across all incomes would mislead almost every
+reader, so the five federal income bands are carried separately, the record
+asks which applies, and the average is only a labelled fallback for anyone who
+would rather not say. That band never appears in a shared link — `share.js`
+works from an explicit key allowlist and `income` is deliberately not on it.
+
+At a handful of very well-endowed schools the lowest bands are **negative**:
+grant aid exceeds the entire cost of attendance and the student is paid to
+attend. Caltech reports −$2,133 under $30k. The first version of the parser
+rejected a leading minus and silently dropped nine schools' figures; they are
+now kept and shown as *"pays you $2,100/yr"* rather than a negative dollar
+amount.
+
+Net price also covers the **whole** cost of a year — housing, books, living —
+while the published tuition figure is tuition and fees alone, so net price can
+legitimately exceed it. The card says so, because showing the two side by side
+without explanation reads as aid having made the school more expensive.
+
+**Graduation rate** carries a caveat this app in particular has to state: the
+federal figure counts first-time, full-time students, which excludes transfer
+students by construction. Every reader here is a transfer student, so it
+describes the campus rather than people arriving the way they are. It is shown
+with that attached, never in a footnote.
+
+Both are reported, not ranked on. Best fits states cost as a reason and flags a
+completion rate under 45% as a caution, but neither moves the ordering —
+folding them in quietly would hide a judgement the list has no business making.
+
+Regenerate with:
+
+```
+node tools/build-costs.mjs Most-Recent-Cohorts-Institution.csv 06102026
+```
+
+## Does a school run the major at all
 
 Explore hides schools that reported no bachelor's degrees in your major last
 year, because an admission probability for a programme that does not exist is a

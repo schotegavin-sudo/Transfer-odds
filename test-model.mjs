@@ -4,12 +4,13 @@
  * label, which let one input contribute two lines that disagreed with each
  * other. Every property below is something a user would notice if it broke.
  */
-import { SCHOOLS, MAJORS, MAJOR_BY_ID, score, levers, poolFor, majorRate, Phi, probit } from "./model.js";
+import { SCHOOLS, MAJORS, MAJOR_BY_ID, BY_NAME, score, levers, poolFor, majorRate, Phi, probit } from "./model.js";
 import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
 import { encodeProfile, decodeProfile } from "./share.js";
 import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
+import { costFor, INCOME_BANDS, costCount } from "./cost-model.js";
 import { MAJOR_CIP, MAJOR_CIP_ALSO, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
 
 let failures = 0, checks = 0;
@@ -673,6 +674,75 @@ await section("Best fits ordering", async () => {
       }
     }
   }
+});
+
+
+await section("Cost and completion", async () => {
+  ok(costCount > 500, `only ${costCount} schools carry cost data`);
+  ok(INCOME_BANDS.length === 5, `expected five income bands, got ${INCOME_BANDS.length}`);
+
+  let net = 0, grads = 0, banded = 0;
+  for (const school of SCHOOLS) {
+    const c = costFor(school, "48to75");
+    if (!c) continue;
+
+    if (c.net !== null) {
+      net++;
+      /* A year of college is not $40 and not $400,000. A parse slipping a
+         factor of a hundred is exactly the bug the hundreds encoding invites. */
+      /* Negative is real — aid can exceed cost — but only to a point, and the
+         upper bound still catches a hundreds-encoding slip. */
+      ok(c.net > -20000 && c.net < 120000, `${school.name}: net price ${c.net} is not credible`);
+      ok(c.aidExceedsCost === (c.net < 0), `${school.name}: aidExceedsCost disagrees with a net price of ${c.net}`);
+      ok(c.basis === "band" || c.basis === "average", `${school.name}: net price with no stated basis`);
+      if (c.basis === "band") banded++;
+    } else {
+      ok(c.basis === null, `${school.name}: no net price but a basis of ${c.basis}`);
+    }
+
+    for (const [k, v] of [["gradRate", c.gradRate], ["retention", c.retention]]) {
+      if (v === null) continue;
+      if (k === "gradRate") grads++;
+      ok(v >= 0 && v <= 100, `${school.name}: ${k} of ${v}% is out of range`);
+    }
+    for (const t of [c.tuitionIn, c.tuitionOut]) {
+      if (t === null) continue;
+      ok(t > 500 && t < 120000, `${school.name}: tuition ${t} is not credible`);
+    }
+    /* Out-of-state is never cheaper than in-state, so a positive gap or none. */
+    ok(c.nonResidentGap === null || c.nonResidentGap > 0, `${school.name}: non-resident gap of ${c.nonResidentGap}`);
+  }
+  ok(net > 500, `only ${net} schools priced`);
+  ok(grads > 500, `only ${grads} schools carry a graduation rate`);
+  ok(banded > 450, `only ${banded} schools carry the $48-75k band specifically`);
+
+  /* The band actually changes the answer — if every band returned the same
+     figure the input would be decoration. Harvard is the extreme case. */
+  const harvard = BY_NAME.get("Harvard University");
+  if (harvard) {
+    const low = costFor(harvard, "48to75").net;
+    const high = costFor(harvard, "over110").net;
+    ok(high > low * 3, `Harvard: $${low} at 48-75k vs $${high} over 110k — the bands are not being read`);
+  }
+
+  /* Saying nothing falls back to the average and admits it. */
+  for (const school of SCHOOLS.slice(0, 40)) {
+    const c = costFor(school, "");
+    if (c && c.net !== null) ok(c.basis === "average", `${school.name}: an empty band claimed basis "${c.basis}"`);
+  }
+
+  /* An unknown band must not throw or silently read as band one. */
+  const probe = BY_NAME.get("The Ohio State University");
+  if (probe) {
+    const bogus = costFor(probe, "not-a-band");
+    ok(bogus.basis === "average", `an unrecognised band gave basis "${bogus.basis}"`);
+    ok(bogus.net === costFor(probe, "").net, "an unrecognised band disagreed with saying nothing");
+  }
+
+  /* Income must never travel in a shared link. */
+  const code = await encodeProfile(withProfile({ income: "over110" }));
+  const back = await decodeProfile(code);
+  ok(!back.income, `a shared link carried income back as ${JSON.stringify(back.income)}`);
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

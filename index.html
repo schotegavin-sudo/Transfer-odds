@@ -134,6 +134,13 @@
         </div>
         <div class="field"><label for="state">Residency</label><select id="state"></select></div>
       </div>
+      <div class="field">
+        <label for="income">Household income <span class="optional">— for net price, optional</span></label>
+        <select id="income">
+          <option value="">Prefer not to say — show the average</option>
+        </select>
+        <p class="majornote" id="incomenote">What a college costs after grants depends heavily on this. It stays in this browser and is never part of a shared link.</p>
+      </div>
       <div class="field"><label for="assoc">Associate degree</label>
         <select id="assoc">
           <option value="no">Not planned</option>
@@ -263,6 +270,7 @@
           <option value="name">Name</option>
           <option value="chance">Best odds for me</option>
           <option value="selective">Most selective</option>
+          <option value="price">Lowest net price</option>
           <option value="state">State</option>
         </select>
         <select id="fstate" aria-label="Filter by state"></select>
@@ -340,6 +348,9 @@
           <p class="caution">Earnings read who enrolled as much as what was taught, and they are nominal — a school in an expensive city sits higher for that reason alone, which is why every field also carries its own state's median. Roughly a third of programs publish no earnings at all: the Department suppresses any figure drawn from too few graduates to report safely, and those show a size and nothing else rather than an estimate.</p>
           <h3>Suggestions are a spread, not a pile</h3>
           <p>Best fits puts the two halves of this app together: the odds decide which band a school competes in, and the program tables decide which schools lead that band. The list is then filled from every band rather than from the top, because twelve reaches is a bad list however strong the programs are. Two caps keep one kind of school from being the whole answer — at most two primarily-online universities, and three from any state but your own.</p>
+          <h3>Cost is the number nobody quotes</h3>
+          <p>The published price of a college is almost never what anyone pays. <b>Net price</b> — the price after the grant aid students actually received — is, and it moves enormously with household income: Harvard's sticker is $61,676 and its net price is $2,091 for a family earning $48,000 to $75,000. At a few very well-endowed schools the aid exceeds the entire cost of attendance and the lowest income bands are negative, meaning the student is paid to attend. Tell the record your income band and every card, suggestion and search result prices itself for you; leave it blank and you get the all-incomes average, labelled as such.</p>
+          <p class="caution">The graduation rate shown beside it is the federal one, which counts <b>first-time, full-time students only</b> and therefore excludes transfer students by construction. It describes the campus you would be joining, not people arriving the way you are. It is worth knowing and it is not your rate; nothing here implies otherwise.</p>
           <h3>Read it as a bracket</h3>
           <p class="caution"><code>P</code> marks a published transfer admit rate, <code>E</code> one estimated from selectivity. The model does not know which majors a campus offers, or this year's department caps. Admission turns on things no calculator sees. Confirm every rate, deadline, and credit cap with the school.</p>
         </div>
@@ -353,6 +364,9 @@
 
         <h3 id="privacy">Privacy</h3>
         <p>Your record stays in your own browser's local storage. There is no account, no server, no database, and nothing is transmitted anywhere — the calculation runs entirely on your device. Clearing your browser data clears your record. Typefaces are served from this site rather than a font provider, so the page makes no third-party request at all.</p>
+
+        <h3 id="cost-data">Cost and completion figures</h3>
+        <p>Net price, published tuition, graduation and retention rates come from the U.S. Department of Education's <b>College Scorecard institution file</b>, which is in the public domain. Net price is the total cost of attendance minus the grant and scholarship aid students actually received, reported both as an average and split across five household income bands; the app uses the band you give it and falls back to the average, saying which it used. Graduation is the six-year rate for first-time, full-time students and excludes transfers. Roughly 99% of the schools here carry all of it.</p>
 
         <h3 id="programs-data">Program figures</h3>
         <p>Degrees awarded, graduate earnings and graduate debt come from the U.S. Department of Education's <b>College Scorecard field-of-study file</b>, which is in the public domain. Earnings are the median for graduates of that program at that school one and two years after completing, drawn from federal tax records, and cover students who received federal aid. Schools are matched to the federal record by IPEDS UNITID, and each of this app's majors is mapped to the federal CIP field it falls in — where a major spans two fields, both are pooled and the app says so. Nothing in that pane is modelled or estimated: a figure is either the federal one or it is marked unpublished.</p>
@@ -417,7 +431,7 @@
         <p><b>This site collects nothing.</b> There is no account, no server, no database, no analytics, no advertising, no tracking pixel and no cookie. The calculation runs entirely inside your browser, on your device. Nothing you type is transmitted anywhere, because there is nowhere for it to go.</p>
 
         <h4>What is stored, and where</h4>
-        <p>When you press <b>Save record</b>, your record — grade point average, credits, college, residency, major, entry term, self-ratings and your school list — is written to your browser's <b>local storage</b> under the key <code>matriculate:v1</code>. Local storage lives on your own device. It is not a cookie, it is never sent with a network request, and no one else can read it, including the publisher.</p>
+        <p>Your record — grade point average, credits, college, residency, household income band, major, entry term, self-ratings and your school list — is written to your browser's <b>local storage</b> under the key <code>matriculate:v1</code>. Local storage lives on your own device. It is not a cookie, it is never sent with a network request, and no one else can read it, including the publisher. <b>Your income band is deliberately left out of shared links</b> — a link you send someone carries your grades and your school list, never what your household earns.</p>
         <p>To erase it: press <b>Clear</b> on the record panel, or clear site data for this domain in your browser settings. A private or incognito window keeps nothing after you close it.</p>
         <p>Under the ePrivacy Directive and comparable rules, storage a user explicitly asks for — here, saving your own record by pressing a button labelled Save — is strictly necessary for the function requested and needs no consent banner. That is the only storage this site performs.</p>
 

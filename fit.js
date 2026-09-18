@@ -15,6 +15,7 @@
  */
 
 import { SCHOOLS, score, findMajor, minGpaOf, clamp } from "./model.js";
+import { costFor } from "./cost-model.js";
 
 /* How many of each band a finished list should hold. Reaches are capped
    because they are the ones that cost money and produce nothing. */
@@ -149,6 +150,18 @@ export function buildSlate(profile, PROG, {
     }
     if (school.control === "pub" && school.state === profile.state) why.push(`an in-state public — resident tuition, and the credit agreements usually run your way`);
     else if (school.state === profile.state) why.push(`in your state`);
+
+    /* Cost and completion are reported here, not ranked on. They are the two
+       things a reader weighs for themselves, and quietly folding them into the
+       ordering would hide a judgement this list has no business making. */
+    const cost = costFor(school, profile.income);
+    if (cost && cost.net !== null) {
+      why.push(cost.aidExceedsCost
+        ? `grant aid exceeds the cost of attendance here — a student in your band is paid about $${Math.abs(Math.round(cost.net)).toLocaleString()} a year`
+        : `about $${Math.round(cost.net).toLocaleString()} a year after grant aid${
+            cost.basis === "average" ? ", averaged across incomes" : ""}`);
+    }
+
     if (r.open) why.push(`open admission — this is a transcript evaluation, not a competition`);
     /* The caveats travel with the row rather than being left for the card. */
     const caution = [];
@@ -156,6 +169,8 @@ export function buildSlate(profile, PROG, {
     if (!r.open && profile.gpa < minGpaOf(school)) caution.push(`publishes a ${minGpaOf(school).toFixed(1)} GPA floor`);
     if (!school.published) caution.push(`its transfer rate is estimated, not published`);
     if (p && p.index === null) caution.push(`earnings for this programme are not published — too few graduates to report`);
+    if (cost && cost.gradRate !== null && cost.gradRate < 45)
+      caution.push(`only ${cost.gradRate}% of its first-time students finish within six years`);
 
     /* Within your own state this still separates a public from a private, and
        cost is the difference that survives once residency is settled. */

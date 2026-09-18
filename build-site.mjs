@@ -22,7 +22,7 @@ const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/tr
 const TITLE = "Matriculate — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
-const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js"];
+const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js", "cost-model.js", "costs.js"];
 const SITE_FILES = ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "og.png", "fonts.css", "legal.css"];
 
 rmSync(dist, { recursive: true, force: true });
@@ -177,8 +177,24 @@ const inline = (name) => {
      the whole offline file silently. Catch it here, where it is a build error. */
   const left = src.match(/^\s*(?:import|export)\b.*/m);
   if (left) throw new Error(`${name}: module syntax survived inlining — ${left[0].trim()}`);
+
+  /* Every module lands in one shared scope here, so two files declaring the
+     same top-level name is a SyntaxError that kills the whole offline file at
+     parse time — silently, since nothing else imports it. Caught at build time
+     instead. */
+  for (const m of src.matchAll(/^(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/gm)) {
+    const prior = topLevelNames.get(m[1]);
+    if (prior && prior !== name) {
+      throw new Error(`offline build: "${m[1]}" is declared at the top level of both ${prior} and ${name}. `
+        + `They share one scope once concatenated — rename one.`);
+    }
+    topLevelNames.set(m[1], name);
+  }
   return src;
 };
+
+/* name -> the file that declared it, across everything inlined so far. */
+const topLevelNames = new Map();
 
 const inlineFonts = existsSync(join(site, "fonts.css"))
   ? readFileSync(join(site, "fonts.css"), "utf8")
@@ -199,7 +215,7 @@ const singleFile = head
     .replace(/<title>[^<]*<\/title>/, "<title>Matriculate (offline copy)</title>")
   + body.replace(/<script type="module"[\s\S]*?<\/script>/, "")
   + `\n<script>\n(function () {\n"use strict";\n`
-  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "programs.js"].map(inline).join("\n")
+  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "costs.js", "cost-model.js", "programs.js"].map(inline).join("\n")
   /* There is no second file to fetch here, so the program tables are handed to
      the loader directly instead of being imported. */
   + `\nglobalThis.__PROGRAM_DATA__ = { CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP };\n`

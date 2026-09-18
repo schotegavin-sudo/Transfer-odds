@@ -7,6 +7,7 @@ import { deadlineFor, daysUntil, verifyLinks } from "./deadlines.js";
 import { shareLink, decodeProfile, readHash } from "./share.js";
 import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
+import { costFor, INCOME_BANDS } from "./cost-model.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -51,6 +52,10 @@ const BLANK = {
   current: "", curtype: "cc", state: "CA", assoc: "prog",
   agreement: false, majorId: "undeclared", term: "fall",
   essay: 3, activity: 3, context: [], list: [],
+  /* Empty means "prefer not to say", and the average net price stands in.
+     Deliberately absent from share.js's key map: a link you send a friend
+     should not carry your household income. */
+  income: "",
 };
 
 /* Built once: everything each school can be found by. */
@@ -263,6 +268,55 @@ function progRow(p, i, sortKey) {
   </li>`;
 }
 
+
+/* Cost and completion: the two things the odds model is silent about.
+ *
+ * Net price leads, because it is the number a family decides on and the one
+ * nobody quotes — sticker price is shown beside it only to make the gap
+ * visible. The graduation rate is shown with its caveat attached rather than
+ * in a footnote: it counts first-time, full-time students, so it excludes
+ * every reader of this app by construction.
+ */
+function costSection(s) {
+  const c = costFor(s, profile.income);
+  if (!c || (c.net === null && c.gradRate === null)) return "";
+
+  const band = INCOME_BANDS.find(([k]) => k === profile.income);
+  const sticker = s.state === profile.state ? c.tuitionIn : c.tuitionOut;
+  const stickerLabel = s.state === profile.state ? "in-state" : "out-of-state";
+
+  const rows = [];
+
+  if (c.net !== null) {
+    rows.push(`<tr><td class="g">What it actually costs</td><td class="d">${
+        c.aidExceedsCost ? "+" + money(Math.abs(c.net)) : money(c.net)}</td>
+      <td class="n">${c.aidExceedsCost
+        ? `grant aid here exceeds the whole cost of attendance, so a student in this band is <b>paid</b> roughly this much a year rather than charged. `
+        : "a year after grant aid, "}${
+        c.basis === "band"
+          ? `for a household earning <b>${esc(band[1].toLowerCase())}</b>`
+          : `averaged across every income — <button type="button" class="linky" data-tab="record">tell it your income</button> for the figure that applies to you`}${
+        sticker !== null
+          ? `. That is the <b>whole</b> cost of a year — housing, books and living included — against ${money(sticker)} of ${stickerLabel} tuition and fees alone, which is why it can be the larger number`
+          : ""}</td></tr>`);
+  }
+  if (c.nonResidentGap !== null && s.state !== profile.state) {
+    rows.push(`<tr><td class="g">Non-resident premium</td><td class="d">+${money(c.nonResidentGap)}</td>
+      <td class="n">what this school charges out-of-state students above its own residents, before aid</td></tr>`);
+  }
+  if (c.gradRate !== null) {
+    rows.push(`<tr><td class="g">Who finishes</td><td class="d">${c.gradRate}%</td>
+      <td class="n">of first-time, full-time students graduate within six years. That count <b>excludes transfer students</b> — it describes the campus you would be joining, not people arriving the way you are</td></tr>`);
+  }
+  if (c.retention !== null) {
+    rows.push(`<tr><td class="g">Who comes back</td><td class="d">${c.retention}%</td>
+      <td class="n">of full-time students return for a second year${
+        c.retention < 70 ? " — low enough to be worth asking the school about" : ""}</td></tr>`);
+  }
+
+  return `<h4>Cost and completion</h4><table class="ledger"><tbody>${rows.join("")}</tbody></table>`;
+}
+
 /* The program block inside a school card: what this campus does in your major,
    and what it does best overall. */
 function programSection(s, majorId) {
@@ -469,6 +523,8 @@ function buildStatic() {
   el("state").innerHTML = opts;
   el("fstate").innerHTML = `<option value="">All states</option>` + opts;
   el("pstate").innerHTML = `<option value="">All states</option>` + opts;
+  el("income").innerHTML = `<option value="">Prefer not to say — show the average</option>`
+    + INCOME_BANDS.map(([k, label]) => `<option value="${k}">${label}</option>`).join("");
   el("psort").innerHTML = Object.entries(PROGRAM_SORTS)
     .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
   el("majorlist").innerHTML = MAJOR_GROUPS.map((g) =>
@@ -506,6 +562,7 @@ function syncForm() {
   setField("curtype", profile.curtype);
   setField("state", profile.state);
   setField("assoc", profile.assoc);
+  setField("income", profile.income || "");
   el("agreement").checked = profile.agreement;
   const major = findMajor(profile.majorId);
   setField("major", major ? major.name : profile.majorId || "");
@@ -526,6 +583,7 @@ function readForm() {
   profile.curtype = el("curtype").value;
   profile.state = el("state").value;
   profile.assoc = el("assoc").value;
+  profile.income = el("income").value;
   profile.agreement = el("agreement").checked;
   const m = findMajor(el("major").value);
   profile.majorId = m ? m.id : el("major").value;
@@ -778,6 +836,8 @@ function cardHtml(r, i, fresh) {
       <p class="sources">${verifyLinks(s).map((l) =>
         `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${esc(l.label)}<small>${esc(l.note)}</small></a>`).join("")}</p>
 
+      ${costSection(s)}
+
       ${programSection(s, profile.majorId)}
 
       <h4>The competition</h4>
@@ -827,6 +887,13 @@ function renderResults() {
 
   const chosen =
     sort === "chance" ? (a, b) => b.r.prob - a.r.prob || a.s.rate - b.s.rate
+    : sort === "price" ? (a, b) => {
+        /* Schools with no published net price sort last rather than first —
+           an absent figure is not a cheap one. */
+        const pa = costFor(a.s, profile.income)?.net ?? Infinity;
+        const pb = costFor(b.s, profile.income)?.net ?? Infinity;
+        return pa - pb || a.s.name.localeCompare(b.s.name);
+      }
     : sort === "selective" ? (a, b) => a.s.rate - b.s.rate
     : sort === "state" ? (a, b) => a.s.state.localeCompare(b.s.state) || a.s.name.localeCompare(b.s.name)
     : (a, b) => a.s.name.localeCompare(b.s.name);
@@ -853,7 +920,14 @@ function renderResults() {
         return `<li class="result">
           <div>
             <div class="name">${esc(s.name)}</div>
-            <div class="meta">${s.state} · ${controlOf(s)}${s.online === 2 ? " · primarily online" : s.online === 1 ? " · online division" : ""} · ${s.rate}%${s.published ? "" : " est."}</div>
+            <div class="meta">${s.state} · ${controlOf(s)}${s.online === 2 ? " · primarily online" : s.online === 1 ? " · online division" : ""} · ${s.rate}%${s.published ? "" : " est."}${
+              (() => {
+                const c = costFor(s, profile.income);
+                if (!c || c.net === null) return "";
+                return c.aidExceedsCost
+                  ? ` · pays you ${money(Math.abs(c.net))}/yr`
+                  : ` · ${money(c.net)}/yr net`;
+              })()}</div>
           </div>
           <div class="odds t-${r.tier.key}">${pct(r.prob)}%<small>${r.tier.label}</small></div>
           <button type="button" class="btn sm" data-add="${esc(s.name)}" ${added ? "disabled" : ""}>${added ? "added" : "Add"}</button>

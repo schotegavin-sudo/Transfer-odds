@@ -35,6 +35,12 @@ filled in. The mapping from this app's majors to federal CIP fields is in
   - https://collegescorecard.ed.gov/data/
   - https://nces.ed.gov/ipeds/
 
+`costs.js` is generated from the same College Scorecard release, institution
+file: net price overall and by the five household income bands, published
+tuition, and the federal graduation and retention rates. Public domain, every
+figure as published, nothing interpolated. Regenerate with
+`node tools/build-costs.mjs`.
+
 ## Institution names
 
 College and university names appear solely to identify the institutions the
