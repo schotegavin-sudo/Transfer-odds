@@ -10,7 +10,7 @@ import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
 import { encodeProfile, decodeProfile } from "./share.js";
 import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
-import { MAJOR_CIP, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
+import { MAJOR_CIP, MAJOR_CIP_ALSO, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
 
 let failures = 0, checks = 0;
 const fail = (msg) => { failures++; console.log("  FAIL  " + msg); };
@@ -598,6 +598,81 @@ await section("Best fits", async () => {
   const weak = buildSlate(withProfile({ majorId: "cs", gpa: 2.4 }), PROG).bands[0].rows;
   const mean = (rows) => rows.reduce((t, c) => t + c.r.prob, 0) / rows.length;
   ok(mean(strong) >= mean(weak) - 0.02, `a 4.0's safety band (${mean(strong).toFixed(2)}) is below a 2.4's (${mean(weak).toFixed(2)})`);
+});
+
+
+await section("Does a school run the major", async () => {
+  const PROG = await loadPrograms();
+
+  /* Every equivalence points at a real major and a real field, and never
+     duplicates a primary code — a silent typo here would quietly widen or
+     narrow what counts as offering a subject. */
+  for (const [majorId, cips] of Object.entries(MAJOR_CIP_ALSO)) {
+    ok(MAJOR_BY_ID.has(majorId), `equivalents name "${majorId}", which is not a major`);
+    ok(MAJOR_CIP[majorId] !== undefined, `${majorId} has equivalents but no primary mapping`);
+    for (const cip of cips) {
+      ok(PROG.fields.has(cip), `${majorId}: equivalent CIP ${cip} is not in the field table`);
+      ok(!(MAJOR_CIP[majorId] || []).includes(cip), `${majorId}: ${cip} is listed as both primary and equivalent`);
+    }
+  }
+
+  /* The equivalences must never leak into the figures. A major's pooled
+     national awards come from its primary fields alone, so adding an
+     equivalent cannot move a single number in the Programs pane. */
+  for (const [majorId, cips] of Object.entries(MAJOR_CIP_ALSO)) {
+    const major = PROG.major(majorId);
+    if (!major) continue;
+    const primary = new Set(MAJOR_CIP[majorId]);
+    for (const f of major.fields)
+      ok(primary.has(f.cip), `${majorId}: field ${f.cip} reached the statistics but is only an equivalent`);
+    ok(major.natAwards === major.fields.reduce((t, f) => t + f.natAwards, 0),
+      `${majorId}: pooled awards no longer add up`);
+  }
+
+  /* A school with no federal program record at all is unknown, never absent —
+     hiding it would be asserting something the data does not say. */
+  let unknown = 0;
+  for (const s2 of SCHOOLS) if (PROG.runsMajor(s2, "cs") === null) unknown++;
+  ok(unknown > 0 && unknown < 60, `${unknown} schools have no program record — expected a small handful`);
+
+  /* A major with no federal field cannot be asked about, so nothing is hidden
+     on its account. */
+  for (const majorId of ["undeclared", "honors"])
+    for (const s2 of SCHOOLS.slice(0, 20))
+      ok(PROG.runsMajor(s2, majorId) === null, `${majorId} should answer "unknown" for every school`);
+
+  /* The bug this was built for: sport management is filed under 3105, beside
+     kinesiology, so mapping it to 3103 alone hid it nearly everywhere. */
+  const sport = SCHOOLS.filter((s2) => PROG.runsMajor(s2, "sportmgmt") === true).length;
+  ok(sport > 300, `only ${sport} schools register as running sport management — the mapping is too narrow again`);
+  /* ...but its figures must still come from 3103 alone, unblended. */
+  ok(PROG.major("sportmgmt").fields.every((f) => f.cip === "3103"),
+    "sport management's statistics picked up a field beyond its primary mapping");
+
+  /* Anything runsMajor says yes to on primary evidence, at() must also find. */
+  for (const majorId of ["nursing", "cs", "mecheng"]) {
+    for (const s2 of SCHOOLS.slice(0, 80)) {
+      if (PROG.at(s2, majorId)) ok(PROG.runsMajor(s2, majorId) === true,
+        `${s2.name}/${majorId}: at() has a program but runsMajor says no`);
+    }
+  }
+});
+
+await section("Best fits ordering", async () => {
+  const PROG = await loadPrograms();
+  for (const state of ["OH", "CA", "TX", "WY", "OR"]) {
+    for (const majorId of ["nursing", "cs", "bizadmin"]) {
+      for (const scope of ["state", "prefer", "any"]) {
+        const s2 = buildSlate(withProfile({ state, majorId, gpa: 3.3 }), PROG, { scope });
+        for (const band of s2.bands) {
+          const odds = band.rows.map((c) => c.r.prob);
+          for (let i = 1; i < odds.length; i++)
+            ok(odds[i - 1] >= odds[i],
+              `${state}/${majorId}/${scope}: band "${band.key}" lists ${(odds[i-1]*100).toFixed(0)}% above ${(odds[i]*100).toFixed(0)}%`);
+        }
+      }
+    }
+  }
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

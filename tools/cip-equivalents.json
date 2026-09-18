@@ -1,0 +1,284 @@
+{
+  "_comment": "Extra federal fields that count as 'this school runs something equivalent' \u2014 used ONLY to decide whether a school offers a major, never to compute its earnings, size or focus. Those still come from the primary mapping in cip-map.json, so a major's statistics are never blended with a neighbouring field's.",
+  "_why": "A school can file the same programme under more than one CIP code. Sport management is the clearest case: CIP 31.0504 sits inside 3105 alongside kinesiology, so a school running sport management reports it under a code our primary map does not name, and hiding that school would be wrong. The reverse mistake matters just as much \u2014 these are curated one by one, never derived by matching words. 'Business management' and 'business administration' are not listed against each other here, and would not be even if they were separate codes: sharing a word is not evidence of being the same degree. As it happens the federal taxonomy already files both under 5202, so this app cannot tell them apart in either direction, and does not pretend to.",
+  "_rule": "Add a code here only when a school could plausibly file THIS major under it. A false hide costs a student a real option; a false show costs them one click. Lean toward showing.",
+  "sportmgmt": [
+    "3105",
+    "5202"
+  ],
+  "kines": [
+    "5109",
+    "5123"
+  ],
+  "interior": [
+    "5004"
+  ],
+  "datasci": [
+    "1107",
+    "1101",
+    "2705"
+  ],
+  "webdev": [
+    "1101",
+    "1107",
+    "1104"
+  ],
+  "ai": [
+    "1107",
+    "3070"
+  ],
+  "softeng": [
+    "1107",
+    "1101"
+  ],
+  "cyber": [
+    "1101",
+    "1107"
+  ],
+  "infosci": [
+    "1101",
+    "1110"
+  ],
+  "it": [
+    "1101",
+    "1107"
+  ],
+  "prehealth": [
+    "2601",
+    "2602",
+    "5100"
+  ],
+  "cogsci": [
+    "4201",
+    "1601",
+    "2615"
+  ],
+  "prelaw": [
+    "2203",
+    "4510"
+  ],
+  "sustain": [
+    "0301",
+    "0302"
+  ],
+  "culinary": [
+    "5209"
+  ],
+  "homeland": [
+    "4304",
+    "4399",
+    "4301"
+  ],
+  "fireadmin": [
+    "4399",
+    "4301"
+  ],
+  "realestate": [
+    "5202",
+    "0410"
+  ],
+  "healthadmin": [
+    "5199",
+    "5202"
+  ],
+  "publichealth": [
+    "5100"
+  ],
+  "medlab": [
+    "5109"
+  ],
+  "respcare": [
+    "5199"
+  ],
+  "radtech": [
+    "5199"
+  ],
+  "athtrain": [
+    "3105",
+    "5123"
+  ],
+  "pa": [
+    "5199"
+  ],
+  "ot": [
+    "5109"
+  ],
+  "pt": [
+    "5109",
+    "3105"
+  ],
+  "speech": [
+    "5109"
+  ],
+  "nutrition": [
+    "5100"
+  ],
+  "bizanalytics": [
+    "5202",
+    "5212"
+  ],
+  "supply": [
+    "5213"
+  ],
+  "entre": [
+    "5202"
+  ],
+  "hr": [
+    "5202"
+  ],
+  "intlbiz": [
+    "5202"
+  ],
+  "actsci": [
+    "2705",
+    "2701"
+  ],
+  "marbio": [
+    "2601"
+  ],
+  "genetics": [
+    "2601",
+    "2602"
+  ],
+  "microbio": [
+    "2601"
+  ],
+  "zoology": [
+    "2601"
+  ],
+  "neuro": [
+    "2601",
+    "4201"
+  ],
+  "biochem": [
+    "2601",
+    "4005"
+  ],
+  "appliedmath": [
+    "2701"
+  ],
+  "stats": [
+    "2701"
+  ],
+  "gamedes": [
+    "1107",
+    "5007"
+  ],
+  "uxdes": [
+    "1107"
+  ],
+  "illus": [
+    "5007"
+  ],
+  "anim": [
+    "5007"
+  ],
+  "arthist": [
+    "5001"
+  ],
+  "creativewrite": [
+    "2301"
+  ],
+  "complit": [
+    "2301",
+    "1609"
+  ],
+  "translation": [
+    "1609",
+    "1603",
+    "1605"
+  ],
+  "asianstud": [
+    "1603"
+  ],
+  "ethnic": [
+    "0501"
+  ],
+  "intlrel": [
+    "4510"
+  ],
+  "publicpol": [
+    "4510",
+    "4501"
+  ],
+  "urbplan": [
+    "4507",
+    "4501"
+  ],
+  "envstud": [
+    "3033"
+  ],
+  "envsci": [
+    "0302",
+    "4001"
+  ],
+  "forestry": [
+    "0301"
+  ],
+  "horti": [
+    "0100"
+  ],
+  "agsci": [
+    "0101",
+    "0109"
+  ],
+  "engtech": [
+    "1400",
+    "1499"
+  ],
+  "mfgeng": [
+    "1435",
+    "1419"
+  ],
+  "matsci": [
+    "1401",
+    "1499"
+  ],
+  "indeng": [
+    "1401"
+  ],
+  "enveng": [
+    "1408"
+  ],
+  "secondaryed": [
+    "1301"
+  ],
+  "elemed": [
+    "1301"
+  ],
+  "earlyed": [
+    "1301",
+    "1907"
+  ],
+  "speced": [
+    "1301"
+  ],
+  "eddev": [
+    "1301",
+    "4201"
+  ],
+  "broadcast": [
+    "0901"
+  ],
+  "pr": [
+    "0901"
+  ],
+  "media": [
+    "0907",
+    "5006"
+  ],
+  "journ": [
+    "0901"
+  ],
+  "interdis": [
+    "2401"
+  ],
+  "libstudies": [
+    "3000",
+    "3099"
+  ],
+  "genstudies": [
+    "3000",
+    "3099"
+  ]
+}

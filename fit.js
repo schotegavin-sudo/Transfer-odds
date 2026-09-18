@@ -273,7 +273,12 @@ export function buildSlate(profile, PROG, {
      in one band loses the ones that did not fit inside that band's places. */
   if (scope === "prefer") overflow((c) => home(c.school));
   overflow(() => true);
-  for (const band of bands) band.rows.sort((a, b) => b.rank - a.rank);
+  /* Sorted by the odds, because the odds are what the row leads with. Ranking
+     by the fit score read as scrambled — a band headed "Live chance" listing
+     41%, 53%, 53% looks broken, whatever the hidden ordering was doing. The
+     fit score still chose WHICH schools are in the band; it just no longer
+     decides the order they appear in. */
+  for (const band of bands) band.rows.sort((a, b) => b.r.prob - a.r.prob || b.rank - a.rank);
 
   const rows = bands.flatMap((b) => b.rows);
   /* Reported so the pane can say what it could not do, rather than quietly

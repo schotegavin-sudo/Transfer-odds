@@ -107,6 +107,10 @@ function save() {
 
 let PROG = null;
 let progLoading = null;
+/* Explore hides schools that report no degrees in your major. This is the way
+   back for anyone who wants the full table anyway — a school filing a
+   programme under a code we do not reach should not be unreachable. */
+let showUnoffered = false;
 /* The pane follows the record's major until you type another one into it, at
    which point the choice is yours and stops being overwritten. */
 let programMajorPinned = false;
@@ -337,13 +341,33 @@ function renderFits() {
 
   if (!slate.total) {
     el("fitscopenote").textContent = "";
+    /* An empty page is a dead end, and the two settings that produce one are
+       both defaults, so the way out has to be on the page rather than in a
+       dropdown the reader has to think to reopen. Which cause is named
+       depends on which setting is actually doing the excluding. */
+    const where = esc(STATE_NAMES[profile.state] || profile.state);
+    const majorLabel = esc(major ? major.name : profile.majorId);
+    const campusOnly = el("fitonline").value === "no";
+    const wider = [];
+    if (slate.scope === "state") wider.push(`<button type="button" class="btn sm" data-widen="scope">Look beyond ${where}</button>`);
+    if (campusOnly) wider.push(`<button type="button" class="btn sm" data-widen="online">Include online universities</button>`);
+
     node.innerHTML = `<p class="empty glass" style="padding:28px 20px;margin:12px 18px">
-      ${slate.scope === "state"
-        ? `No school in ${esc(STATE_NAMES[profile.state] || profile.state)} in this database runs <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Switch to <b>prefer my state</b> or <b>anywhere in the country</b> above to see schools outside it.`
-        : slate.covered
-        ? `No school in this database reported bachelor's degrees in <b>${esc(major ? major.name : profile.majorId)}</b> under those filters. Widen them above, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`
-        : `<b>${esc(major ? major.name : profile.majorId)}</b> has no bachelor's field of its own in the federal data, so there is no way to tell which schools run it. Pick a nearer major in your record, or use <b>Explore</b> to search all ${SCHOOLS.length} schools directly.`}
+      ${!slate.covered
+        ? `<b>${majorLabel}</b> has no bachelor's field of its own in the federal data, so there is no way to tell which schools run it. Pick a nearer major in your record, or search all ${SCHOOLS.length} schools in <b>Explore</b>.`
+        : slate.scope === "state"
+          ? `No ${campusOnly ? "campus " : ""}school in ${where} reported bachelor's degrees in <b>${majorLabel}</b> last year.${
+              campusOnly ? " It is a rare enough subject that few states have one." : ""}`
+          : `No school matched <b>${majorLabel}</b> under these filters.`}
+      ${wider.length ? `<span style="display:block;margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${wider.join("")}</span>` : ""}
     </p>`;
+
+    node.querySelectorAll("[data-widen]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        if (btn.dataset.widen === "scope") el("fitscope").value = "prefer";
+        else el("fitonline").value = "yes";
+        renderFits();
+      }));
     return;
   }
 
@@ -705,6 +729,8 @@ function renderDeadlines(results) {
 function cardHtml(r, i, fresh) {
   const s = r.school;
   const flags = [];
+  if (PROG && PROG.runsMajor(s, profile.majorId) === false)
+    flags.push(`<span class="flag warn">reports no degrees in ${esc(findMajor(profile.majorId)?.name || "this major")}</span>`);
   if (!s.published) flags.push(`<span class="flag">rate estimated</span>`);
   if (r.blocked) flags.push(`<span class="flag warn">fall intake only</span>`);
   if (profile.credits > s.maxCr) flags.push(`<span class="flag warn">over the ${s.maxCr}-hour cap</span>`);
@@ -777,13 +803,26 @@ function renderResults() {
   const sort = el("fsort").value;
   const band = { a: [0, 20], b: [20, 50], c: [50, 85], d: [85, 101] }[fsel];
 
+  /* A school that reported no degrees in your major last year is not a place
+     you can study it, and an admission probability for it is a number about
+     nothing. Hidden rather than printed — but only where the federal data can
+     actually answer the question: a school with no program record at all is
+     unknown, not absent, and is always shown. */
+  let hidden = 0;
+  const offersMajor = (s) => {
+    if (!PROG || showUnoffered) return true;
+    const runs = PROG.runsMajor(s, profile.majorId);
+    if (runs === false) { hidden++; return false; }
+    return true;
+  };
+
   const hits = SCHOOLS.filter((s) => {
     if (fs && s.state !== fs) return false;
     if (fc && s.control !== fc) return false;
     if (fo !== "" && String(s.online) !== fo) return false;
     if (band && (s.rate < band[0] || s.rate >= band[1])) return false;
-    if (!q) return true;
-    return matches(INDEX.get(s.name), q);
+    if (!q ? false : !matches(INDEX.get(s.name), q)) return false;
+    return offersMajor(s);
   }).map((s) => ({ s, r: score(s, profile, false), rank: relevance(s, INDEX.get(s.name), q) }));
 
   const chosen =
@@ -795,7 +834,17 @@ function renderResults() {
      first even under "best odds for me". */
   hits.sort(q ? (a, b) => a.rank - b.rank || chosen(a, b) : chosen);
 
-  el("dbshown").textContent = `${hits.length} of ${SCHOOLS.length} schools`;
+  const majorName = findMajor(profile.majorId)?.name;
+  el("dbshown").innerHTML = `${hits.length} of ${SCHOOLS.length} schools`
+    + (hidden > 0
+        ? ` — <b>${hidden}</b> hidden, none reporting degrees in ${esc(majorName || "your major")}.
+            <button type="button" class="linky" id="showall">Show them anyway</button>`
+        : showUnoffered && PROG && majorName
+          ? ` — including schools that report no degrees in ${esc(majorName)}.
+              <button type="button" class="linky" id="showall">Hide those again</button>`
+          : "");
+  const toggle = el("showall");
+  if (toggle) toggle.addEventListener("click", () => { showUnoffered = !showUnoffered; renderResults(); });
   const shown = hits.slice(0, 150);
   el("results").innerHTML = shown.length === 0
     ? `<li class="empty">Nothing matches those filters.</li>`
@@ -909,7 +958,7 @@ function setTab(name, { animate = true, focus = false } = {}) {
   }
   document.querySelectorAll(".navitem").forEach((b) =>
     b.setAttribute("aria-current", b.dataset.tab === name ? "page" : "false"));
-  if (name === "programs" || name === "fits") ensurePrograms();
+  if (name === "programs" || name === "fits" || name === "explore") ensurePrograms();
   if (focus) {
     const pane = el(PANES[name]);
     pane.setAttribute("tabindex", "-1");

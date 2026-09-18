@@ -27,6 +27,9 @@ import { SCHOOLS, BY_NAME } from "./model.js";
 import { LINK_ROWS } from "./links.js";
 
 const CIP_BY_MAJOR = {};   /* filled by setCipMap, from the generated table */
+/* Fields that count only toward "does this school run this major". Never used
+   for a figure — see tools/cip-equivalents.json for why the two are separate. */
+const ALSO_BY_MAJOR = {};
 
 /* unitid -> school, so the federal rows can find their way back to a card. */
 const BY_UNITID = new Map();
@@ -50,8 +53,8 @@ export async function loadPrograms() {
 }
 export const programsReady = () => cache;
 
-function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP }) {
-  setCipMap(MAJOR_CIP);
+function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP, MAJOR_CIP_ALSO }) {
+  setCipMap(MAJOR_CIP, MAJOR_CIP_ALSO);
 
   const fields = new Map();
   for (const line of CIP_ROWS.split("\n")) {
@@ -203,6 +206,24 @@ function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP 
     major: (majorId) => majors.get(majorId) || null,
     covered: (majorId) => majors.has(majorId),
 
+    /* Does this school run this major at all?
+     *
+     * Deliberately more generous than at(): a school that files the programme
+     * under a neighbouring code still counts, because the cost of wrongly
+     * hiding a school from somebody is a lost option, while the cost of
+     * wrongly showing one is a click. Answers null when the major has no
+     * federal field of its own and the question cannot be asked. */
+    runsMajor(school, majorId) {
+      if (!majors.has(majorId)) return null;
+      const rows = rawBySchool.get(school.name);
+      if (!rows) return null;
+      const wanted = new Set([
+        ...(CIP_BY_MAJOR[majorId] || []),
+        ...(ALSO_BY_MAJOR[majorId] || []),
+      ]);
+      return rows.list.some((r) => wanted.has(r.cip) && r.awards > 0);
+    },
+
     /* What a given school offers in a given major. */
     at(school, majorId) {
       return (bySchool.get(school.name) || []).find((p) => p.majorId === majorId) || null;
@@ -228,9 +249,11 @@ function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP 
   };
 }
 
-export function setCipMap(map) {
+export function setCipMap(map, also = {}) {
   for (const k of Object.keys(CIP_BY_MAJOR)) delete CIP_BY_MAJOR[k];
   Object.assign(CIP_BY_MAJOR, map);
+  for (const k of Object.keys(ALSO_BY_MAJOR)) delete ALSO_BY_MAJOR[k];
+  Object.assign(ALSO_BY_MAJOR, also);
 }
 
 /* ------------------------------------------------------------------ sorts */

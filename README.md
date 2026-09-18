@@ -145,6 +145,28 @@ type it.
 https://schotegavin-sudo.github.io/transfer-odds/?fresh
 ```
 
+### Does a school run the major at all
+
+Explore hides schools that reported no bachelor's degrees in your major last
+year, because an admission probability for a programme that does not exist is a
+number about nothing — MIT used to show 5.7% for social work. A school with no
+federal programme record at all is *unknown* rather than absent and is always
+shown, and the count line above the results says how many were hidden with a
+one-click way to see them anyway. Schools already on your list are never
+removed by this, only flagged.
+
+Deciding it needs a second, looser mapping. `tools/cip-map.json` says which
+federal field a major's **figures** come from; `tools/cip-equivalents.json` adds
+fields that count only toward *does this school run it*. The two are separate on
+purpose. Sport management is the case that forced it: CIP 31.0504 sits inside
+3105 next to kinesiology, so mapping sport management to 3103 alone recognised
+it at 42 schools instead of 454 — but pooling it into 3105 for the statistics
+would blend its graduates' earnings with kinesiology's. Equivalences are
+curated one at a time and never derived by matching words: sharing a word is
+not evidence of being the same degree, and the federal taxonomy already files
+business management and business administration under one code, so this app
+cannot separate them in either direction and does not pretend to.
+
 ## Best fits
 
 Where the walkthrough ends. The odds model knows what you can get into and the

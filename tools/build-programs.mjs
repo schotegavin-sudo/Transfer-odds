@@ -37,7 +37,14 @@ if (!csvPath) {
 
 const cipMap = JSON.parse(readFileSync(join(here, "cip-map.json"), "utf8"));
 delete cipMap._comment;
-const WANTED = new Set(Object.values(cipMap).flat());
+
+/* Fields that only decide whether a school runs a major, never what the major's
+   numbers are. Kept apart from cipMap for exactly that reason: pooling sport
+   management into 3105 would blend its earnings with kinesiology's. */
+const cipAlso = JSON.parse(readFileSync(join(here, "cip-equivalents.json"), "utf8"));
+for (const k of Object.keys(cipAlso)) if (k.startsWith("_")) delete cipAlso[k];
+
+const WANTED = new Set([...Object.values(cipMap).flat(), ...Object.values(cipAlso).flat()]);
 
 const linkSrc = readFileSync(join(repo, "links.js"), "utf8");
 const UNITS = new Map();   // unitid -> school name
@@ -194,6 +201,9 @@ const out = `/* Program scale and outcomes, by school and field of study.
  * College Scorecard field-of-study file, release ${release}. Public domain.
  * Do not edit by hand — regenerate instead.
  *
+ * MAJOR_CIP_ALSO  extra fields that count only toward "does this school run
+ *             this major", never toward its figures. See tools/cip-equivalents.json.
+ *
  * CIP_ROWS    cip | federal field title | bachelor's awards nationally |
  *             national median earnings one year out, in hundreds of dollars |
  *             number of programs that median is drawn from
@@ -215,6 +225,10 @@ export const NATIONAL_AWARDS = ${nationalTotal};
 
 /* Which federal field each of our majors falls in. Kept beside the data it
    indexes so the two cannot drift apart. Source: tools/cip-map.json. */
+export const MAJOR_CIP_ALSO = ${JSON.stringify(
+  Object.fromEntries(Object.entries(cipAlso).map(([k, v]) => [k, v.filter((c) => fieldName.has(c))]).filter(([, v]) => v.length)),
+  null, 0).replace(/","/g, '", "').replace(/\],"/g, '],\n  "').replace(/^\{/, "{\n  ").replace(/\}$/, ",\n}")};
+
 export const MAJOR_CIP = ${JSON.stringify(
   Object.fromEntries(Object.entries(cipMap).map(([k, v]) => [k, v.filter((c) => fieldName.has(c))])),
   null, 0).replace(/","/g, '", "').replace(/\],"/g, '],\n  "').replace(/^\{/, "{\n  ").replace(/\}$/, ",\n}").replace(/,\n\}$/, ",\n}")};
