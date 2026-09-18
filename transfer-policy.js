@@ -134,3 +134,46 @@ export function policyFor(school, profile) {
 }
 
 export const POLICY_STATES = Object.keys(POLICIES);
+
+/* ---------------------------------------------------------------------------
+ * California: a link into ASSIST rather than a copy of it.
+ *
+ * ASSIST is the official course-by-course articulation repository for
+ * California's public colleges, and it is the one place in the country where
+ * that question has a published answer. Its content is copyrighted by the
+ * Regents and revised every catalogue year, so this app does not reproduce it.
+ * It constructs a link instead: the reader lands on the agreement itself,
+ * current as of the moment they open it, on the site that maintains it.
+ */
+import { ASSIST_YEAR, ASSIST_YEAR_LABEL, ASSIST_RECEIVING, ASSIST_SENDING } from "./assist.js";
+
+const flat = (x) => x.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/* The reader types their current college as free text, so match generously —
+   but only ever to decide whether we can pre-fill their side of the link. A
+   wrong guess would be visible and corrigible on ASSIST's own page; no match
+   simply sends them to choose it there. */
+export function matchSendingCollege(text) {
+  if (!text) return null;
+  const q = flat(text);
+  if (q.length < 4) return null;
+  for (const [name, id] of ASSIST_SENDING) if (flat(name) === q) return { name, id };
+  for (const [name, id] of ASSIST_SENDING) {
+    const n = flat(name);
+    if (n.includes(q) || q.includes(n)) return { name, id };
+  }
+  return null;
+}
+
+export function assistLink(school, profile) {
+  const to = ASSIST_RECEIVING.get(school.name);
+  if (!to) return null;
+  const from = matchSendingCollege(profile.current);
+  return {
+    year: ASSIST_YEAR_LABEL,
+    from: from ? from.name : null,
+    href: from
+      ? `https://assist.org/transfer/results?year=${ASSIST_YEAR}&institution=${from.id}&agreement=${to}&agreementType=to&view=agreement&viewByKey=${ASSIST_YEAR}/${from.id}/to/${to}/AllDepartments`
+      : "https://assist.org/",
+  };
+}

@@ -8,7 +8,7 @@ import { shareLink, decodeProfile, readHash } from "./share.js";
 import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS } from "./cost-model.js";
-import { policyFor } from "./transfer-policy.js";
+import { policyFor, assistLink } from "./transfer-policy.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -320,39 +320,74 @@ function costSection(s) {
 
 /* Will my credits transfer.
  *
- * Course-by-course articulation is not public data anywhere in the country, so
- * this section does not pretend to answer per course. What it answers is the
- * layer that IS in statute: whether your state guarantees admission, junior
- * standing, or a general education block, and whether this particular school is
- * bound by it. Where a state has no such policy on record, the section is not
- * rendered at all — an empty space being more honest than a hedge.
+ * Course-by-course articulation is not public data anywhere in the country
+ * except California, and even there it belongs to somebody else. So this
+ * section answers in three tiers, and never invents a fourth:
+ *
+ *   1. The statewide guarantee, where a statute or system agreement says one
+ *      exists and this school is bound by it.
+ *   2. A link into ASSIST, California's official articulation repository —
+ *      pre-filled with both colleges where we know them. Its content is the
+ *      Regents', is revised every catalogue year, and is not copied here.
+ *   3. Otherwise: we have no public source, said plainly, with the school's
+ *      own admissions office one click away.
+ *
+ * The third tier is the common case and is the point of the whole section.
+ * This app narrows 588 schools to a slate worth applying to; the school itself
+ * is the only authority on what it will accept, and sending a reader there
+ * beats a confident guess by a distance that matters.
  */
 function transferSection(s) {
   const p = policyFor(s, profile);
-  if (!p) return "";
+  const a = assistLink(s, profile);
+  if (!p && !a) return noSourceBlock(s);
 
-  const verdict =
-    p.binds === true
-      ? `<span class="flag good">this school is covered</span>`
-      : p.binds === false
-      ? `<span class="flag warn">this school is outside it</span>`
+  const parts = [`<h4>Will my credits transfer</h4>`];
+
+  if (p) {
+    const verdict =
+      p.binds === true ? `<span class="flag good">this school is covered</span>`
+      : p.binds === false ? `<span class="flag warn">this school is outside it</span>`
       : `<span class="flag">participation is per-institution — check</span>`;
 
-  /* A definition list rather than the numeric ledger used elsewhere: here the
-     prose IS the value, and the ledger drops its note column on phones. */
-  const rows = [
-    ["Admission", p.admission],
-    ["Credit", p.credits],
-    ...(p.note ? [["Note", p.note]] : []),
-  ].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+    /* A definition list rather than the numeric ledger used elsewhere: here the
+       prose IS the value, and the ledger drops its note column on phones. */
+    const rows = [
+      ["Admission", p.admission],
+      ["Credit", p.credits],
+      ...(p.note ? [["Note", p.note]] : []),
+    ].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
 
-  return `<h4>Will my credits transfer</h4>
-    <p class="policyline"><b>${esc(p.name)}</b> ${verdict}
-      <small>${esc(p.authority)} · read ${esc(p.verified)}</small></p>
-    <dl class="policy">${rows}</dl>
-    <p class="sources"><a href="${p.source}" target="_blank" rel="noopener noreferrer">Read the policy itself<small>${
-      esc(new URL(p.source).host.replace(/^www\./, ""))} — the wording that governs, not this summary</small></a></p>`;
+    parts.push(`<p class="policyline"><b>${esc(p.name)}</b> ${verdict}
+        <small>${esc(p.authority)} · read ${esc(p.verified)}</small></p>
+      <dl class="policy">${rows}</dl>
+      <p class="sources"><a href="${p.source}" target="_blank" rel="noopener noreferrer">Read the policy itself<small>${
+        esc(linkHost(p.source))} — the wording that governs, not this summary</small></a></p>`);
+  }
+
+  if (a) {
+    parts.push(`<p class="sources"><a href="${a.href}" target="_blank" rel="noopener noreferrer">${
+        a.from ? `Course-by-course, ${esc(a.from)} to this school` : "Course-by-course on ASSIST"
+      }<small>assist.org — California's official articulation record, ${esc(a.year)}${
+        a.from ? "" : ". Name your current college on the Your record tab and this link will open your own agreement"}</small></a></p>`);
+  }
+
+  return parts.join("\n");
 }
+
+/* The honest answer for the other forty-one states: we do not know, and here
+   is who does. Rendering nothing would read as "no obstacle". */
+function noSourceBlock(s) {
+  const link = verifyLinks(s).find((l) => l.label === "Admissions office");
+  return `<h4>Will my credits transfer</h4>
+    <p class="policyline"><b>No public source for this school</b> <span class="flag">ask the school</span>
+      <small>${esc(s.state)} publishes no statewide transfer guarantee we could verify, and course-by-course
+      articulation is not public data outside California. The registrar decides this, and will tell you before you apply.</small></p>
+    ${link ? `<p class="sources"><a href="${link.href}" target="_blank" rel="noopener noreferrer">Ask ${
+      esc(s.name)}<small>${esc(linkHost(link.href))} — their transfer credit policy and evaluation</small></a></p>` : ""}`;
+}
+
+const linkHost = (url) => { try { return new URL(url).host.replace(/^www\./, ""); } catch { return url; } };
 
 /* The program block inside a school card: what this campus does in your major,
    and what it does best overall. */

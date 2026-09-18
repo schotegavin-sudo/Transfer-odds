@@ -12,7 +12,8 @@ import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS, costCount } from "./cost-model.js";
 import { MAJOR_CIP, MAJOR_CIP_ALSO, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
-import { POLICIES, POLICY_STATES, VERIFIED, policyFor } from "./transfer-policy.js";
+import { POLICIES, POLICY_STATES, VERIFIED, policyFor, assistLink, matchSendingCollege } from "./transfer-policy.js";
+import { ASSIST_YEAR, ASSIST_RECEIVING, ASSIST_SENDING } from "./assist.js";
 
 let failures = 0, checks = 0;
 const fail = (msg) => { failures++; console.log("  FAIL  " + msg); };
@@ -803,6 +804,58 @@ await section("Transfer guarantees", () => {
     const s = inState(st);
     if (s) ok(policyFor(s, withProfile({ state: st }))?.binds === null,
       `${st}: an opt-in policy asserted coverage instead of asking the reader to check`);
+  }
+});
+
+/* 18. ASSIST: a link, never a copy.
+ *
+ * ASSIST's articulation content belongs to the Regents and is revised every
+ * catalogue year, so the only safe thing to ship is a way in. These tests keep
+ * it that way: identifiers only, every link on assist.org, and never a link
+ * offered for a school that does not take part. */
+await section("ASSIST links", () => {
+  ok(Number.isInteger(ASSIST_YEAR) && ASSIST_YEAR > 0, `bad academic year id ${ASSIST_YEAR}`);
+  ok(ASSIST_RECEIVING.size > 40, `only ${ASSIST_RECEIVING.size} receiving institutions`);
+  ok(ASSIST_SENDING.size > 100, `only ${ASSIST_SENDING.size} community colleges`);
+
+  for (const [name, id] of ASSIST_RECEIVING) {
+    ok(BY_NAME.has(name), `ASSIST receiving "${name}" is not a school in this app`);
+    ok(BY_NAME.get(name).state === "CA", `${name} is not in California but carries an ASSIST id`);
+    ok(Number.isInteger(id) && id > 0, `${name}: bad ASSIST id ${id}`);
+  }
+
+  const cc = (o) => withProfile({ state: "CA", curtype: "cc", current: "Los Angeles City College", ...o });
+  const ucla = BY_NAME.get("University of California, Los Angeles");
+  if (ucla) {
+    const a = assistLink(ucla, cc());
+    ok(a && a.from === "Los Angeles City College", "UCLA: the sending college was not matched");
+    ok(a.href.startsWith("https://assist.org/transfer/results?"), `UCLA: unexpected href ${a.href}`);
+    ok(a.href.includes(`year=${ASSIST_YEAR}`), "UCLA: the link does not carry the live catalogue year");
+    /* Both institutions must appear, or the reader lands on a chooser. */
+    ok(/institution=\d+/.test(a.href) && /agreement=\d+/.test(a.href), "UCLA: link is missing an institution");
+    /* No college named means the chooser, not a guessed agreement. */
+    const bare = assistLink(ucla, cc({ current: "" }));
+    ok(bare.from === null && bare.href === "https://assist.org/", `an unnamed college produced ${bare.href}`);
+  }
+
+  /* Schools outside ASSIST must never be linked into it. */
+  for (const n of ["Stanford University", "University of Southern California", "The Ohio State University"]) {
+    const s = BY_NAME.get(n);
+    if (s) ok(assistLink(s, cc()) === null, `${n} was offered an ASSIST link`);
+  }
+
+  /* Every link points at assist.org and nowhere else. */
+  for (const [name] of ASSIST_RECEIVING) {
+    const a = assistLink(BY_NAME.get(name), cc());
+    ok(new URL(a.href).host === "assist.org", `${name}: link leaves assist.org`);
+  }
+
+  /* Matching is generous but never reckless: a stray word must not bind. */
+  ok(matchSendingCollege("") === null, "an empty college matched something");
+  ok(matchSendingCollege("xyz") === null, "a three-letter string matched a college");
+  for (const [name] of ASSIST_SENDING) {
+    const m = matchSendingCollege(name);
+    ok(m && m.name === name, `"${name}" did not match itself`);
   }
 });
 
