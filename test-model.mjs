@@ -4,7 +4,7 @@
  * label, which let one input contribute two lines that disagreed with each
  * other. Every property below is something a user would notice if it broke.
  */
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { SCHOOLS, MAJORS, MAJOR_BY_ID, BY_NAME, score, levers, poolFor, majorRate, Phi, probit } from "./model.js";
 import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
@@ -896,7 +896,11 @@ await section("ASSIST links", () => {
  * assertions tie the prose to things the code can actually check. */
 await section("Terms, privacy and notices", () => {
   const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-  const appjs = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  /* Every module, not just app.js: the licence key is written by
+     entitlement.js, and scoping this to one file let it go unmentioned. */
+  const appjs = readdirSync(new URL(".", import.meta.url))
+    .filter((f) => f.endsWith(".js"))
+    .map((f) => readFileSync(new URL("./" + f, import.meta.url), "utf8")).join("\n");
   const doc = (id) => {
     const a = html.indexOf(`<article class="legaldoc" id="${id}"`);
     ok(a > 0, `no #${id} article in index.html`);
@@ -977,6 +981,28 @@ await section("The paywall", async () => {
   ok(listLimit() === Infinity, "a paid licence still caps the list");
   const back = await loadPrograms();
   ok(back.at(osu, "psych").earn1 !== null, "earnings did not return after re-activating");
+});
+
+/* 21. Every named import resolves.
+ *
+ * A misspelled or renamed export is a module-level failure: the browser
+ * refuses the whole script and the page is simply blank, with nothing on fire
+ * in any of these tests because none of them import that name. It happened —
+ * app.js asked entitlement.js for claimFromTransaction while the file still
+ * exported claimFromSession, and the site booted to an empty shell. Node's
+ * resolver answers this question exactly, so ask it about every module. */
+await section("Imports resolve", async () => {
+  const files = readdirSync(new URL(".", import.meta.url))
+    .filter((f) => f.endsWith(".js") && f !== "programs.js" && f !== "costs.js");
+  for (const file of files) {
+    const src = readFileSync(new URL("./" + file, import.meta.url), "utf8");
+    for (const m of src.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/([^"]+)"/g)) {
+      const names = m[1].split(",").map((x) => x.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
+      const target = await import("./" + m[2]);
+      for (const n of names)
+        ok(n in target, `${file} imports { ${n} } from ./${m[2]}, which does not export it`);
+    }
+  }
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

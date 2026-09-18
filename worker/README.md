@@ -12,22 +12,49 @@ wrangler login
 
 cd worker
 wrangler kv namespace create LICENCES     # put the id into wrangler.toml
-wrangler secret put STRIPE_SECRET         # sk_live_... or sk_test_...
-wrangler secret put STRIPE_WEBHOOK        # whsec_... from the webhook endpoint
+wrangler secret put PADDLE_API_KEY        # pdl_sdbx_apikey_... then pdl_live_apikey_...
+wrangler secret put PADDLE_WEBHOOK        # pdl_ntfset_... from the notification destination
 wrangler deploy
 ```
 
-Then set `PRICE_ID` and `SITE` in `wrangler.toml`, and point
-`API` in `../entitlement.js` at the deployed worker.
+Then set `PRICE_ID`, `CHECKOUT_URL`, `PADDLE_API` and `SITE` in
+`wrangler.toml`, and point `API` in `../entitlement.js` at the deployed worker.
 
-## Stripe
+## Paddle
 
-1. Create a one-off Price for Matriculate Plus. Put its id in `PRICE_ID`.
-2. Add a webhook endpoint at `https://<worker>/v1/stripe` subscribed to
-   `checkout.session.completed`, `charge.refunded` and `charge.dispute.created`.
-   Its signing secret is `STRIPE_WEBHOOK`.
-3. Turn on Stripe Tax if you want the tax calculated. **It is calculated, not
-   filed** — see below.
+Paddle is the **merchant of record**: they are the seller, and registering
+for, collecting and filing sales tax and VAT is theirs, not ours. That is why
+they are here rather than a payment processor.
+
+1. **Approve the domain.** Paddle > Checkout > Website approval. The hosted
+   checkout will not open on a domain Paddle has not approved.
+2. **Create the product and a one-off price.** Put the price id (`pri_...`)
+   into `PRICE_ID`.
+3. **Set the default payment link** to `https://<site>/checkout.html`
+   (Paddle > Checkout > Checkout settings), and put the same URL in
+   `CHECKOUT_URL`. That page is the only page on the site that loads Paddle.js.
+4. **Add a notification destination** at `https://<worker>/v1/paddle`,
+   subscribed to `transaction.completed` and `adjustment.created`. Its secret
+   (`pdl_ntfset_...`) is `PADDLE_WEBHOOK`.
+5. **Client token.** Paddle > Authentication > Client-side tokens. It is a
+   public value, but it differs between sandbox and live, so the site build
+   reads it from the environment:
+
+   ```sh
+   PADDLE_ENV=sandbox PADDLE_TOKEN=test_xxx npm run build
+   PADDLE_ENV=live    PADDLE_TOKEN=live_xxx npm run build
+   ```
+
+Work in the sandbox first: set `PADDLE_API` to `https://sandbox-api.paddle.com`
+and use sandbox keys throughout. Nothing charges anyone until live keys are in.
+
+## Tests
+
+`node worker/test.mjs` runs the real handler against a stub KV. It covers the
+things that would be expensive to get wrong: data refused without a licence, a
+forged signature rejected and writing nothing, a replayed delivery rejected, a
+retry returning the same key rather than a second licence, a refund revoking
+access, and CORS refusing an unknown origin.
 
 ## Regenerating the data
 
@@ -39,13 +66,12 @@ paid tables come from the same split and are not independently versioned.
 
 ## What this does not handle
 
-- **Tax filing.** Stripe Tax computes what is owed. Registering in each
-  jurisdiction and filing the returns is the publisher's, and there is no code
-  here that helps with it.
+- **Tax.** Paddle handles it, which is the reason they were chosen. Nothing in
+  this codebase computes, collects or files tax, and nothing should start.
 - **Email delivery of keys.** The buyer gets their key on the success page,
-  which carries the Checkout session id. There is no mail sender wired up, so a
+  which carries the Paddle transaction id. There is no mail sender wired up, so a
   buyer who closes that tab before copying the key needs it looked up by hand
-  (`wrangler kv key get --binding=LICENCES "s:<session id>"`). Wiring a sender
+  (`wrangler kv key get --binding=LICENCES "t:<transaction id>"`). Wiring a sender
   is the first thing to add.
 - **Device limits.** A key works anywhere it is pasted. That is deliberate for
   now — someone who bought this should be able to use it on their phone and

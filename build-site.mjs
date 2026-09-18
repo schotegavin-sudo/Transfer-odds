@@ -22,6 +22,12 @@ const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/tr
 const TITLE = "Matriculate — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
+/* Paddle's client token is a public value — it identifies the seller to the
+   checkout overlay and grants nothing — but it still differs between sandbox
+   and live, so it is read from the environment rather than pinned here. */
+const PADDLE_ENV = process.env.PADDLE_ENV || "sandbox";
+const PADDLE_TOKEN = process.env.PADDLE_TOKEN || "REPLACE_WITH_PADDLE_CLIENT_TOKEN";
+
 const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js", "cost-model.js", "income-bands.js", "entitlement.js", "assist.js", "transfer-policy.js"];
 const SITE_FILES = ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "og.png", "fonts.css", "legal.css"];
 
@@ -285,6 +291,62 @@ for (const [file, id, title, desc] of [
 </html>
 `);
 }
+
+/* The checkout page, and the only page on this site that loads a script from
+ * anywhere else.
+ *
+ * Paddle's hosted checkout is not a redirect to Paddle: it is an overlay that
+ * Paddle.js opens on a page of our own, on a domain Paddle has approved. That
+ * means their script has to run somewhere. Putting it here rather than in the
+ * app keeps the claim on the privacy page true — the calculator contacts no
+ * one — and confines the third party to a page nobody reaches without
+ * deciding to buy something.
+ *
+ * The transaction id arrives as ?_ptxn=, which Paddle.js picks up on its own.
+ */
+writeFileSync(join(dist, "checkout.html"), legalHead("Checkout — Matriculate",
+  "Complete your Matriculate Plus purchase.", "checkout.html").replace("</head>", `
+<meta name="robots" content="noindex">
+</head>`) + `<header class="topbar glass">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">M</span>
+    <div><span class="brandname">Matriculate</span><p class="counts">Checkout</p></div>
+  </div>
+</header>
+<main class="legalwrap">
+  <article class="legaldoc">
+    <h1>Matriculate Plus</h1>
+    <p id="ckstate">Opening the checkout…</p>
+    <p class="sub">Payment is handled by Paddle, who are the seller of record. This page loads Paddle's
+      checkout script; no other page on this site loads anything from anywhere else.</p>
+    <noscript><p><b>This page needs JavaScript to open the checkout.</b></p></noscript>
+    <p><a href="./">← Back to the calculator</a></p>
+  </article>
+</main>
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script>
+  var CFG = ${JSON.stringify({ env: PADDLE_ENV, token: PADDLE_TOKEN })};
+  var state = document.getElementById("ckstate");
+  try {
+    if (CFG.env === "sandbox") Paddle.Environment.set("sandbox");
+    Paddle.Initialize({
+      token: CFG.token,
+      eventCallback: function (e) {
+        if (e.name === "checkout.completed") {
+          var id = e.data && e.data.transaction_id;
+          location.href = "./?paid=1&txn=" + encodeURIComponent(id || "");
+        }
+      },
+    });
+    if (!new URLSearchParams(location.search).has("_ptxn"))
+      state.textContent = "This page opens from the Get Plus button. Head back to the calculator and start there.";
+  } catch (err) {
+    state.textContent = "The checkout could not be opened. Nothing has been charged.";
+  }
+</script>
+</body>
+</html>
+`);
 
 writeFileSync(join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 

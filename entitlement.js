@@ -90,19 +90,33 @@ export function deactivate() {
   announce();
 }
 
-/* After Stripe sends the buyer back, the success URL carries the session id;
-   the key is exchanged for it once and then lives in this browser. */
-export async function claimFromSession(session) {
-  const r = await fetch(API + "/v1/claim", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ session }),
-  }).catch(() => null);
-  if (!r || !r.ok) return { ok: false, error: r ? "not_ready" : "unreachable" };
-  const body = await r.json();
-  return body.key ? activate(body.key) : { ok: false, error: "not_ready" };
+/* After the checkout completes, the page comes back with the Paddle
+   transaction id and exchanges it for the licence key, once.
+
+   Paddle's webhook and the buyer's browser race, and the browser usually wins:
+   the redirect fires the moment the payment clears, and the webhook that mints
+   the licence may be a second or two behind it. So "not ready" is a normal
+   step in the sequence rather than a failure, and it is retried for a few
+   seconds before anybody is told that anything is wrong. */
+export async function claimFromTransaction(txn, { tries = 6, gap = 1500 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    const r = await fetch(API + "/v1/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ txn }),
+    }).catch(() => null);
+    if (r && r.ok) {
+      const body = await r.json();
+      if (body.key) return activate(body.key);
+    }
+    if (r && r.status === 400) return { ok: false, error: "bad_transaction" };
+    if (i < tries - 1) await new Promise((res) => setTimeout(res, gap));
+  }
+  return { ok: false, error: "not_ready" };
 }
 
+/* The API creates a Paddle transaction and hands back the URL of our own
+   checkout page with its id attached; Paddle.js opens the overlay there. */
 export async function beginCheckout() {
   const r = await fetch(API + "/v1/checkout", { method: "POST" }).catch(() => null);
   if (!r || !r.ok) return { ok: false, error: "unreachable" };

@@ -5,19 +5,29 @@
  * bundle is decoration. The paid tables are not in the bundle at all. They are
  * here, and they are returned only to a request carrying a live licence.
  *
+ * Payment runs through Paddle, which is a merchant of record rather than a
+ * processor: Paddle is the seller, and registering for, collecting and filing
+ * sales tax and VAT is theirs. That is the whole reason it is here. Selling
+ * digital goods to an EU consumer creates a VAT obligation on the first sale,
+ * with no threshold beneath it, which is not a thing one person should be
+ * hand-rolling.
+ *
  * Routes
  *   GET  /v1/health              is it up, and which build of the data
  *   POST /v1/activate            { key } -> { ok, tier, since }
  *   GET  /v1/data                Authorization: Bearer <key> -> the paid tables
- *   POST /v1/checkout            { price } -> { url }   Stripe Checkout
- *   POST /v1/stripe              Stripe webhook: mints and revokes licences
+ *   POST /v1/checkout            -> { url }  a Paddle-hosted checkout
+ *   POST /v1/paddle              Paddle webhook: mints and revokes licences
+ *   POST /v1/claim               { txn } -> { key } after a completed checkout
  *
  * Bindings (see wrangler.toml)
  *   LICENCES        KV namespace, licence key -> record
- *   STRIPE_SECRET   secret, sk_...
- *   STRIPE_WEBHOOK  secret, whsec_...
- *   PRICE_ID        the Stripe price to sell
- *   SITE            the site origin, for CORS and Checkout redirects
+ *   PADDLE_API_KEY  secret, pdl_live_apikey_... (or pdl_sdbx_apikey_...)
+ *   PADDLE_WEBHOOK  secret, pdl_ntfset_...
+ *   PADDLE_API      https://api.paddle.com, or the sandbox host
+ *   PRICE_ID        the Paddle price to sell, pri_...
+ *   CHECKOUT_URL    the page on our own domain that carries Paddle.js
+ *   SITE            allowed origins, comma separated
  */
 
 import COSTS from "../data/costs.txt";
@@ -72,40 +82,47 @@ async function readLicence(env, key) {
   return { id, ...rec };
 }
 
-/* ------------------------------------------------------------------- stripe */
+/* ------------------------------------------------------------------- paddle */
 
-const form = (o) => new URLSearchParams(o).toString();
-
-async function stripe(env, path, body, method = "POST") {
-  const r = await fetch("https://api.stripe.com/v1/" + path, {
-    method,
+async function paddle(env, path, body) {
+  const r = await fetch((env.PADDLE_API || "https://api.paddle.com") + path, {
+    method: "POST",
     headers: {
-      authorization: "Bearer " + env.STRIPE_SECRET,
-      "content-type": "application/x-www-form-urlencoded",
+      authorization: "Bearer " + env.PADDLE_API_KEY,
+      "content-type": "application/json",
     },
-    body: body ? form(body) : undefined,
+    body: JSON.stringify(body),
   });
   const out = await r.json();
-  if (!r.ok) throw new Error(out?.error?.message || "stripe " + r.status);
-  return out;
+  if (!r.ok) throw new Error(out?.error?.detail || "paddle " + r.status);
+  return out.data;
 }
 
-/* Stripe signs webhooks with HMAC-SHA256 over "<timestamp>.<raw body>". The
-   SDK is not available in a Worker, so this verifies by hand — including the
-   timestamp window, without which a captured delivery could be replayed
-   forever, and a constant-time compare, because a fast string compare on a
-   signature leaks it a byte at a time. */
-async function verifyStripe(env, raw, header) {
+/* Paddle signs with HMAC-SHA256 over "<ts>:<raw body>", hex, under the
+   notification endpoint secret. Verified by hand because no SDK runs in a
+   Worker — and with the same two properties that matter anywhere: a timestamp
+   window, without which a captured delivery replays forever, and a
+   constant-time compare, because a fast compare on a signature leaks it a byte
+   at a time.
+
+   Paddle's own SDKs allow five seconds. That is tight for a cross-internet
+   delivery, and a rejected webhook means somebody who paid does not get their
+   licence — but Paddle retries a non-2xx for three days, so a delivery lost to
+   a latency spike comes back, whereas a window wide enough to be comfortable
+   is a window wide enough to replay in. Five seconds stands. */
+const SIGNATURE_TOLERANCE = 5;
+
+async function verifyPaddle(env, raw, header) {
   const parts = Object.fromEntries(
-    String(header || "").split(",").map((p) => p.split("=").map((s) => s.trim())));
-  if (!parts.t || !parts.v1) return false;
-  if (Math.abs(Date.now() / 1000 - Number(parts.t)) > 300) return false;
+    String(header || "").split(";").map((p) => p.split("=").map((x) => x.trim())));
+  if (!parts.ts || !parts.h1) return false;
+  if (Math.abs(Date.now() / 1000 - Number(parts.ts)) > SIGNATURE_TOLERANCE) return false;
 
   const enc = new TextEncoder();
   const k = await crypto.subtle.importKey(
-    "raw", enc.encode(env.STRIPE_WEBHOOK), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(parts.t + "." + raw)));
-  const want = parts.v1.match(/.{2}/g)?.map((h) => parseInt(h, 16)) || [];
+    "raw", enc.encode(env.PADDLE_WEBHOOK), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(parts.ts + ":" + raw)));
+  const want = parts.h1.match(/.{2}/g)?.map((h) => parseInt(h, 16)) || [];
   if (want.length !== sig.length) return false;
   let diff = 0;
   for (let i = 0; i < sig.length; i++) diff |= sig[i] ^ want[i];
@@ -163,72 +180,74 @@ export default {
         });
       }
 
-      /* ---- checkout ---- */
+      /* ---- checkout ----
+         Paddle's hosted checkout is a page on our own approved domain that
+         carries Paddle.js; the API hands back its URL with the transaction id
+         appended, and Paddle.js opens the overlay when the buyer lands. */
       if (url.pathname === "/v1/checkout" && req.method === "POST") {
-        const site = (env.SITE || "").split(",")[0].trim();
-        const session = await stripe(env, "checkout/sessions", {
-          mode: "payment",
-          "line_items[0][price]": env.PRICE_ID,
-          "line_items[0][quantity]": "1",
-          success_url: site + "/?paid=1&session={CHECKOUT_SESSION_ID}",
-          cancel_url: site + "/?paid=0",
-          /* Stripe Tax computes the sales tax and VAT owed. It does not file
-             it. Whoever runs this owes the returns. */
-          "automatic_tax[enabled]": "true",
+        const txn = await paddle(env, "/transactions", {
+          items: [{ price_id: env.PRICE_ID, quantity: 1 }],
+          checkout: { url: env.CHECKOUT_URL },
         });
-        return json({ url: session.url }, 200, head);
+        return json({ url: txn.checkout?.url, txn: txn.id }, 200, head);
       }
 
       /* ---- webhook ---- */
-      if (url.pathname === "/v1/stripe" && req.method === "POST") {
+      if (url.pathname === "/v1/paddle" && req.method === "POST") {
         const raw = await req.text();
-        if (!(await verifyStripe(env, raw, req.headers.get("stripe-signature"))))
+        if (!(await verifyPaddle(env, raw, req.headers.get("paddle-signature"))))
           return json({ ok: false, error: "bad_signature" }, 400);
 
         const evt = JSON.parse(raw);
-        const o = evt.data?.object || {};
+        const o = evt.data || {};
 
-        if (evt.type === "checkout.session.completed") {
-          /* Stripe retries a delivery it did not hear back from, so minting
-             must be idempotent: the session id is the identity of the
-             purchase, and a second delivery returns the first key. */
-          const existing = await env.LICENCES.get("s:" + o.id);
+        if (evt.event_type === "transaction.completed") {
+          /* Paddle retries a delivery it did not hear back from, so minting
+             must be idempotent: the transaction id is the identity of the
+             purchase, and a second delivery returns the first key rather than
+             handing the same buyer a second licence. */
+          const existing = await env.LICENCES.get("t:" + o.id);
           if (existing) return json({ ok: true, key: existing });
 
           const key = mintKey();
           const rec = {
             status: "active",
             created: new Date().toISOString().slice(0, 10),
-            email: o.customer_details?.email || null,
-            session: o.id,
-            customer: o.customer || null,
+            email: o.customer?.email || o.billing_details?.email || null,
+            txn: o.id,
+            customer: o.customer_id || null,
           };
           await env.LICENCES.put("k:" + key.replace(/^MTRC-/, ""), JSON.stringify(rec));
-          await env.LICENCES.put("s:" + o.id, key);
-          /* The key reaches the buyer on the success page, which carries the
-             session id; email delivery is a later addition, not a dependency. */
+          await env.LICENCES.put("t:" + o.id, key);
           return json({ ok: true });
         }
 
-        if (evt.type === "charge.refunded" || evt.type === "charge.dispute.created") {
-          const key = o.payment_intent && await env.LICENCES.get("p:" + o.payment_intent);
+        /* A refund or a chargeback ends the licence. Paddle models both as an
+           adjustment against the original transaction, so the transaction id
+           leads straight back to the key that was minted for it. */
+        if (evt.event_type === "adjustment.created" &&
+            ["refund", "chargeback", "chargeback_warning"].includes(o.action)) {
+          const key = o.transaction_id && await env.LICENCES.get("t:" + o.transaction_id);
           if (key) {
             const id = key.replace(/^MTRC-/, "");
             const rec = await env.LICENCES.get("k:" + id, "json");
-            if (rec) await env.LICENCES.put("k:" + id, JSON.stringify({ ...rec, status: "revoked" }));
+            if (rec) await env.LICENCES.put("k:" + id,
+              JSON.stringify({ ...rec, status: "revoked", revoked: o.action }));
           }
           return json({ ok: true });
         }
 
-        return json({ ok: true, ignored: evt.type });
+        return json({ ok: true, ignored: evt.event_type });
       }
 
-      /* ---- claim: exchange a completed checkout session for its key ---- */
+      /* ---- claim: exchange a completed transaction for its key ---- */
       if (url.pathname === "/v1/claim" && req.method === "POST") {
-        const { session } = await req.json().catch(() => ({}));
-        if (!/^cs_[A-Za-z0-9_]+$/.test(String(session || "")))
-          return json({ ok: false, error: "bad_session" }, 400, head);
-        const key = await env.LICENCES.get("s:" + session);
+        const { txn } = await req.json().catch(() => ({}));
+        if (!/^txn_[A-Za-z0-9]+$/.test(String(txn || "")))
+          return json({ ok: false, error: "bad_transaction" }, 400, head);
+        const key = await env.LICENCES.get("t:" + txn);
+        /* The webhook may not have landed yet: "not ready" is a real state and
+           the page retries, rather than telling a buyer their payment failed. */
         if (!key) return json({ ok: false, error: "not_ready" }, 404, head);
         return json({ ok: true, key }, 200, head);
       }

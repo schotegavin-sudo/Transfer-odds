@@ -431,7 +431,7 @@
       <article class="legaldoc" id="terms" data-doc="terms" data-title="Terms of use">
         <h3>Terms of use</h3>
         <p class="updated">Last updated 18 September 2026</p>
-        <p>Matriculate is a free tool published by an individual. By using it you agree to what follows. If you do not agree, do not use it.</p>
+        <p>Matriculate is published by an individual. The calculator is free; some figures are sold as an optional upgrade, Matriculate Plus. By using the site you agree to what follows. If you do not agree, do not use it.</p>
 
         <h4>1. What the service is</h4>
         <p>Matriculate helps a prospective transfer student build a list of colleges worth applying to. It does several distinct things, and they carry different weight:</p>
@@ -479,13 +479,23 @@
         </ul>
         <p>The source code is published under the MIT License, which permits reuse and modification on its own terms. Those terms govern the code; this section governs use of the hosted site.</p>
 
-        <h4>12. Minors</h4>
+        <h4>12. Paying for Matriculate Plus</h4>
+        <p><b>What is free.</b> Admission estimates for every school, best fits, how large each programme is, deadlines, the state transfer guarantees, the offline copy, and a saved list of up to five schools. Nothing that was free has been taken away to make Plus.</p>
+        <p><b>What Plus adds.</b> Net price by household income band, published tuition and the non-resident premium, the federal graduation and retention rates, graduate earnings and debt by programme, an unlimited list, CSV export and share links.</p>
+        <p><b>Who you are buying from.</b> Payment is handled by <b>Paddle.com Market Limited</b>, who are the merchant of record — legally the seller. Your receipt and card statement will say Paddle, and Paddle collect and remit any sales tax or VAT due. Their terms and privacy policy apply to the transaction itself.</p>
+        <p><b>What you get.</b> A licence key, shown on the page you are returned to after paying. Paste it into the Matriculate Plus tab of any browser you want it active in. There is no account and no password. The key is not tied to one device; treat it as you would a password, because anyone who has it can use it.</p>
+        <p><b>Refunds.</b> Write to the address below within <b>30 days</b> and you will be refunded, no reasons needed. Refunds are issued by Paddle, and the licence stops working when one is processed. Nothing about the free part of the site changes.</p>
+        <p><b>If something goes wrong.</b> If a payment succeeds and no licence arrives, write to the address below with the Paddle receipt and it will be issued by hand. If Plus stops working for a reason that is not a refund or a chargeback, that is a fault and it will be fixed or refunded.</p>
+        <p><b>What is not promised.</b> Plus buys access to figures as the federal government published them, not accuracy beyond what the Department of Education itself provides, and not any particular outcome. The whole of section 4 applies to them.</p>
+        <p><b>Ending it.</b> The publisher may stop selling Plus at any time. Licences already sold keep working for as long as the site runs; if the site is withdrawn within twelve months of a purchase, that purchase will be refunded on request.</p>
+
+        <h4>13. Minors</h4>
         <p>The site is intended for prospective transfer students, who are generally adults. It collects no personal information from anyone, of any age. If you are under 13, ask a parent or guardian before using it.</p>
 
-        <h4>13. Changes</h4>
-        <p>These terms may be updated. The date above says when they last were. Continuing to use the site after a change means you accept the revised terms. The site is free today; if paid features are ever offered, terms covering payment will be published before that happens.</p>
+        <h4>14. Changes</h4>
+        <p>These terms may be updated. The date above says when they last were. Continuing to use the site after a change means you accept the revised terms. A change that affects what a licence already bought will not be applied to licences sold before it.</p>
 
-        <h4>14. Contact</h4>
+        <h4>15. Contact</h4>
         <p>Questions, corrections and takedown requests: <a href="mailto:schote.gavin@yahoo.com">schote.gavin@yahoo.com</a></p>
       </article>
 
@@ -495,13 +505,18 @@
         <p><b>This site collects nothing.</b> There is no account, no server, no database, no analytics, no advertising, no tracking pixel and no cookie. Every calculation runs inside your browser, on your device. Nothing you type is transmitted anywhere, because there is nowhere for it to go.</p>
 
         <h4>What is stored, and where</h4>
-        <p>Your record — grade point average, credits, college, residency, household income band, major, entry term, self-ratings and your school list — is written to your browser's <b>local storage</b> under the key <code>matriculate:v1</code>. A second key, <code>matriculate:walkthrough:v1</code>, records only that you have seen the opening questions, so you are not asked again. Earlier versions of the site used <code>transfer-odds:v1</code> and <code>transfer-odds:walkthrough:v1</code>; those are read once so a returning visitor does not lose their list, and are otherwise unused.</p>
+        <p>Your record — grade point average, credits, college, residency, household income band, major, entry term, self-ratings and your school list — is written to your browser's <b>local storage</b> under the key <code>matriculate:v1</code>. A second key, <code>matriculate:walkthrough:v1</code>, records only that you have seen the opening questions, so you are not asked again. If you have bought Matriculate Plus, a third, <code>matriculate:licence:v1</code>, holds your licence key. Earlier versions of the site used <code>transfer-odds:v1</code> and <code>transfer-odds:walkthrough:v1</code>; those are read once so a returning visitor does not lose their list, and are otherwise unused.</p>
         <p>Local storage lives on your own device. It is not a cookie, it is never sent with a network request, and no one else can read it, including the publisher. <b>Your income band is deliberately left out of shared links</b> — a link you send someone carries your grades and your school list, never what your household earns. This is enforced by a test that fails the build if income ever survives a round trip through a link.</p>
         <p>To erase it: press <b>Clear</b> on the record panel, or clear site data for this domain in your browser settings. A private or incognito window keeps nothing after you close it. <b>Export CSV</b> writes a file to your own machine and sends it nowhere.</p>
         <p>Under the ePrivacy Directive and comparable rules, storage a user explicitly asks for — here, your own record, saved so the site is usable on your next visit — is strictly necessary for the function requested and needs no consent banner. That is the only storage this site performs.</p>
 
         <h4>Third parties</h4>
         <p><b>The site contacts none.</b> The typefaces are served from this site's own origin rather than from a font CDN, so while you use the site your browser makes no request to any third party, and no third party sees your address through it. This was verified by recording every network request the site makes during a full session: all of them go to this site and nowhere else.</p>
+        <h4>Paying</h4>
+        <p>The calculator itself still contacts nobody, and buying something does not change that. Checkout happens on a <b>separate page</b>, reached only by pressing Get Plus, and that page is the one place on this site that loads a script from somewhere else — Paddle's, because their checkout requires it. Your card details go to Paddle and are never seen by this site or its publisher.</p>
+        <p>Paddle are the merchant of record, so the name and email on the receipt are held by <b>them</b>, under their privacy policy. What comes back here is a licence key and nothing else: no name, no email, no card. The key is stored in this browser beside your record, under <code>matriculate:licence:v1</code>, and is sent to the licence API to ask one question — is this key active — and nowhere else. Your record, your list and your income band are never sent with it.</p>
+        <p>The licence API sees the key and the request, and keeps no log tying either to a person. Removing the key from this browser is a button on the Matriculate Plus tab.</p>
+
         <p>The site does <b>link</b> to other places — colleges' own admissions pages, federal records, state policy pages and ASSIST. Nothing is sent to them until you click, and what you type here is never attached to those links. Once you follow one you are on someone else's site, under their privacy policy rather than this one.</p>
 
         <h4>Offline use</h4>
@@ -514,7 +529,7 @@
         <p>Because nothing is collected, there is nothing to request, correct, export or delete from anyone else's systems — the rights you hold under the GDPR, the UK GDPR, the CCPA and similar laws have no data here to attach to. Nothing is ever sold or shared, because nothing is ever received.</p>
 
         <h4>If this ever changes</h4>
-        <p>If analytics, accounts, payment or any other data collection are added later, this page will be rewritten before that ships and the date above will change. Any analytics adopted will be cookieless and aggregate.</p>
+        <p>If analytics, accounts or any other data collection are added later, this page will be rewritten before that ships and the date above will change. Any analytics adopted will be cookieless and aggregate.</p>
 
         <h4>Contact</h4>
         <p><a href="mailto:schote.gavin@yahoo.com">schote.gavin@yahoo.com</a></p>
@@ -537,6 +552,9 @@
 
         <h4>ASSIST</h4>
         <p><b>ASSIST is the official repository of articulation for California's public colleges and universities</b>, operated by the Regents of the University of California on behalf of the California Community Colleges, the California State University and the University of California. Its articulation content is copyrighted by the Regents and is <b>not reproduced here</b>. This site stores only institution identifiers and the current academic year, taken from ASSIST's own public institution list, and uses them to construct links into assist.org so that readers land on the agreement itself, maintained and current, on the site that maintains it.</p>
+
+        <h4>Payment</h4>
+        <p>Payment for Matriculate Plus is processed by <b>Paddle.com Market Limited</b> as merchant of record. Paddle.js is loaded from Paddle's own CDN on the checkout page only. Paddle is not affiliated with this project beyond that relationship, and no institution named on this site is involved in it.</p>
 
         <h4>Institution names</h4>
         <p>College and university names appear solely to identify the institutions the estimates describe. This is nominative use. No institution has reviewed, endorsed, sponsored or supplied anything in this project, and no logos, crests, seals or mascots are reproduced.</p>

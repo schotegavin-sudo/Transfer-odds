@@ -2,15 +2,16 @@
   "name": "matriculate",
   "version": "1.0.0",
   "private": true,
-  "description": "Matriculate — transfer admission odds for 588 US colleges, scored against the applicant pool you would actually compete with.",
+  "description": "Matriculate \u2014 transfer admission odds for 588 US colleges, scored against the applicant pool you would actually compete with.",
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node test-model.mjs",
+    "test": "node test-model.mjs && node worker/test.mjs",
     "build": "node build-site.mjs",
     "serve": "node build-site.mjs && npx --yes serve dist",
     "images": "node make-images.mjs",
-    "fonts": "node fetch-fonts.mjs"
+    "fonts": "node fetch-fonts.mjs",
+    "split": "node tools/split-paid.mjs"
   },
   "devDependencies": {
     "playwright": "^1.49.1"

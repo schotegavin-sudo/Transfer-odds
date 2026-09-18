@@ -14,10 +14,17 @@ binding = "LICENCES"
 id = "REPLACE_WITH_KV_ID"
 
 [vars]
-# Comma-separated list of origins allowed to call this API.
+# Origins allowed to call this API, comma separated.
 SITE = "https://schotegavin-sudo.github.io"
-PRICE_ID = "price_REPLACE"
+
+# Sandbox while testing: https://sandbox-api.paddle.com
+PADDLE_API = "https://sandbox-api.paddle.com"
+
+# The Paddle price being sold, and the page on our own domain that carries
+# Paddle.js. Paddle must approve that domain before the hosted checkout works.
+PRICE_ID = "pri_REPLACE"
+CHECKOUT_URL = "https://schotegavin-sudo.github.io/transfer-odds/checkout.html"
 
 # Secrets are NOT set here. Set them once, from the terminal:
-#   wrangler secret put STRIPE_SECRET
-#   wrangler secret put STRIPE_WEBHOOK
+#   wrangler secret put PADDLE_API_KEY    # pdl_sdbx_apikey_... then pdl_live_apikey_...
+#   wrangler secret put PADDLE_WEBHOOK    # pdl_ntfset_...

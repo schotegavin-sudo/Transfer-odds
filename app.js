@@ -10,7 +10,7 @@ import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS } from "./cost-model.js";
 import { policyFor, assistLink } from "./transfer-policy.js";
 import { isPaid, listLimit, FREE_LIST_LIMIT, activate, deactivate, licenceKey,
-         restoreEntitlement, claimFromSession, beginCheckout, onEntitlementChange } from "./entitlement.js";
+         restoreEntitlement, claimFromTransaction, beginCheckout, onEntitlementChange } from "./entitlement.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -1554,7 +1554,8 @@ const ENTITLEMENT_MESSAGE = {
   not_entitled: "That key is not active. Check it against your receipt, or write to the address on the terms page.",
   unreachable: "Could not reach the licence service. Your key is fine — try again in a moment.",
   empty: "Paste the key from your receipt first.",
-  not_ready: "The payment went through but the licence is still being created. Give it a few seconds and try again.",
+  not_ready: "The payment went through, but the licence has not come back yet. It usually takes a few seconds — reload this page, and if it still is not here, write to the address on the terms page with your Paddle receipt.",
+  bad_transaction: "That checkout could not be matched. Write to the address on the terms page with your Paddle receipt and it will be sorted out.",
   no_licence: "",
 };
 
@@ -1598,9 +1599,10 @@ onEntitlementChange(() => { renderPlusState(); });
    the buyer back with the session id, which is exchanged for the key once. */
 (async () => {
   const params = new URLSearchParams(location.search);
-  const session = params.get("session");
-  if (params.get("paid") === "1" && session) {
-    const r = await claimFromSession(session);
+  const txn = params.get("txn");
+  if (params.get("paid") === "1" && txn) {
+    say("Payment received — setting up your licence…");
+    const r = await claimFromTransaction(txn);
     say(r.ok
       ? "Thank you — Plus is active on this device. Your licence key is on the Plus tab."
       : ENTITLEMENT_MESSAGE[r.error] || "Payment received; the licence is still being created.");
