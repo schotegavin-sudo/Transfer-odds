@@ -16,6 +16,7 @@
 
 import { SCHOOLS, score, findMajor, minGpaOf, clamp } from "./model.js";
 import { costFor } from "./cost-model.js";
+import { isPaid } from "./entitlement.js";
 
 /* How many of each band a finished list should hold. Reaches are capped
    because they are the ones that cost money and produce nothing. */
@@ -168,7 +169,11 @@ export function buildSlate(profile, PROG, {
     if (profile.credits > school.maxCr) caution.push(`takes ${school.maxCr} hours at most, and you have ${profile.credits}`);
     if (!r.open && profile.gpa < minGpaOf(school)) caution.push(`publishes a ${minGpaOf(school).toFixed(1)} GPA floor`);
     if (!school.published) caution.push(`its transfer rate is estimated, not published`);
-    if (p && p.index === null) caution.push(`earnings for this programme are not published — too few graduates to report`);
+    /* Only a real absence is worth a caution. Without a licence every earnings
+       figure is null because it was never sent, and saying the Department
+       suppressed it would be a plain untruth about the school. */
+    if (isPaid() && p && p.index === null)
+      caution.push(`earnings for this programme are not published — too few graduates to report`);
     if (cost && cost.gradRate !== null && cost.gradRate < 45)
       caution.push(`only ${cost.gradRate}% of its first-time students finish within six years`);
 

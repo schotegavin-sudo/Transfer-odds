@@ -9,6 +9,8 @@ import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS } from "./cost-model.js";
 import { policyFor, assistLink } from "./transfer-policy.js";
+import { isPaid, listLimit, FREE_LIST_LIMIT, activate, deactivate, licenceKey,
+         restoreEntitlement, claimFromSession, beginCheckout, onEntitlementChange } from "./entitlement.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -225,11 +227,7 @@ function renderPrograms() {
     + (rows.length > shown.length ? `<li class="empty">${rows.length - shown.length} more match. Narrow it down to see them.</li>` : "");
 
   node.querySelectorAll("[data-add]").forEach((b) =>
-    b.addEventListener("click", () => {
-      if (profile.list.includes(b.dataset.add)) return;
-      profile.list = [...profile.list, b.dataset.add];
-      touched();
-    }));
+    b.addEventListener("click", () => addToList(b.dataset.add, b)));
 }
 
 function progRow(p, i, sortKey) {
@@ -279,6 +277,7 @@ function progRow(p, i, sortKey) {
  * every reader of this app by construction.
  */
 function costSection(s) {
+  if (!isPaid()) return costLocked();
   const c = costFor(s, profile.income);
   if (!c || (c.net === null && c.gradRate === null)) return "";
 
@@ -316,6 +315,52 @@ function costSection(s) {
   }
 
   return `<h4>Cost and completion</h4><table class="ledger"><tbody>${rows.join("")}</tbody></table>`;
+}
+
+/* Adding a school, in one place.
+ *
+ * The free list holds five. That cap is enforced here in the browser, and
+ * unlike the paid figures it is not a secret: it governs this browser's own
+ * saved list, so there is nothing to withhold and nothing to protect. Someone
+ * who edits it out gets a longer list, which is a fair trade for not having
+ * lied to them about what it is. */
+let sayTimer = null;
+function say(text, kind = "") {
+  const node = el("notice");
+  if (!node) return;
+  node.textContent = text;
+  node.className = "notice show " + kind;
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(() => (node.className = "notice"), 6000);
+}
+
+function addToList(name, button) {
+  if (!name || profile.list.includes(name)) return;
+  if (profile.list.length >= listLimit()) {
+    say(`Your list holds ${FREE_LIST_LIMIT} schools on the free plan. Remove one, or open Matriculate Plus for an unlimited list.`, "cap");
+    return;
+  }
+  profile.list = [...profile.list, name];
+  if (button) button.disabled = true;
+  touched();
+}
+
+/* The locked state.
+ *
+ * It names the figures rather than teasing them, because someone deciding
+ * whether to pay deserves to know exactly what they would get — and because a
+ * blurred number implies the app is holding something back from this browser,
+ * which would be untrue. These figures are not here at all. */
+function costLocked() {
+  return `<h4>Cost and completion</h4>
+    <div class="locked">
+      <p><b>What this actually costs, and who finishes.</b> Net price for a household at your
+        income after grant aid, published tuition, the non-resident premium, and the federal
+        graduation and retention rates.</p>
+      <p class="lockwhy">These come from the College Scorecard and are part of Matriculate Plus.
+        They are not in this page — nothing here is hidden from you, it simply has not been sent.</p>
+      <p><button type="button" class="btn sm" data-tab="plus">See what Plus includes</button></p>
+    </div>`;
 }
 
 /* Will my credits transfer.
@@ -432,7 +477,9 @@ function programSection(s, majorId) {
         <td class="n">of the ${ranked.length} in this database that publish earnings for this field</td></tr>` : ""}
       ` : `
       <tr><td class="g">Earnings</td><td class="d">—</td>
-        <td class="n">not published. The Department suppresses any figure drawn from too few graduates to report without identifying them, so this is a statement about the cohort's size, not its outcome</td></tr>`}
+        <td class="n">${isPaid()
+          ? "not published. The Department suppresses any figure drawn from too few graduates to report without identifying them, so this is a statement about the cohort's size, not its outcome"
+          : `graduate earnings and debt are part of Matriculate Plus and are not in this page. <button type="button" class="linky" data-tab="plus">What Plus includes</button>`}</td></tr>`}
     </tbody></table>`;
 }
 
@@ -509,11 +556,7 @@ function renderFits() {
     </section>`).join("");
 
   node.querySelectorAll("[data-add]").forEach((b) =>
-    b.addEventListener("click", () => {
-      if (profile.list.includes(b.dataset.add)) return;
-      profile.list = [...profile.list, b.dataset.add];
-      touched();
-    }));
+    b.addEventListener("click", () => addToList(b.dataset.add, b)));
 }
 
 /* What the residency setting managed, in a sentence. A control that silently
@@ -1009,11 +1052,7 @@ function renderResults() {
       }).join("") + (hits.length > shown.length ? `<li class="empty">${hits.length - shown.length} more match. Narrow the search to see them.</li>` : "");
 
   el("results").querySelectorAll("[data-add]").forEach((b) =>
-    b.addEventListener("click", () => {
-      if (profile.list.includes(b.dataset.add)) return;
-      profile.list = [...profile.list, b.dataset.add];
-      touched();
-    }));
+    b.addEventListener("click", () => addToList(b.dataset.add, b)));
 }
 
 /* --------------------------------------------------------------- motion
@@ -1078,7 +1117,7 @@ function initMotion() {
  * keyboard as well as the pointer.
  */
 
-const PANES = { record: "pane-record", list: "pane-list", fits: "pane-fits", explore: "pane-explore", programs: "pane-programs", method: "pane-method", legal: "pane-legal" };
+const PANES = { record: "pane-record", list: "pane-list", fits: "pane-fits", explore: "pane-explore", programs: "pane-programs", method: "pane-method", plus: "pane-plus", legal: "pane-legal" };
 let currentTab = "list";
 
 function setTab(name, { animate = true, focus = false } = {}) {
@@ -1406,8 +1445,12 @@ el("fitwhy").addEventListener("click", () => {
 });
 el("fitaddall").addEventListener("click", () => {
   if (!slate) return;
-  const names = slate.bands.flatMap((b) => b.rows.map((c) => c.school.name));
-  profile.list = [...profile.list, ...names.filter((n) => !profile.list.includes(n))];
+  const names = slate.bands.flatMap((b) => b.rows.map((c) => c.school.name))
+    .filter((n) => !profile.list.includes(n));
+  const room = listLimit() - profile.list.length;
+  profile.list = [...profile.list, ...names.slice(0, Math.max(0, room))];
+  if (names.length > room)
+    say(`Added ${Math.max(0, room)} of ${names.length}. The free list holds ${FREE_LIST_LIMIT} — Matriculate Plus lifts the cap.`, "cap");
   touched();
 });
 for (const id of ["pmajor", "psort", "pstate", "pmin", "pscope"]) {
@@ -1428,10 +1471,14 @@ el("reset").addEventListener("click", () => {
   startWalkthrough({ force: true });
 });
 
-el("share").addEventListener("click", copyShareLink);
+el("share").addEventListener("click", () => {
+  if (!isPaid()) return say("Share links are part of Matriculate Plus.", "cap");
+  copyShareLink();
+});
 el("shareurl").addEventListener("focus", (e) => e.target.select());
 
 el("export").addEventListener("click", async () => {
+  if (!isPaid()) return say("CSV export is part of Matriculate Plus.", "cap");
   readForm();
   const rows = profile.list.map((n) => BY_NAME.get(n)).filter(Boolean)
     .map((s) => score(s, profile, false)).sort((a, b) => b.prob - a.prob);
@@ -1484,3 +1531,83 @@ function flashExport(word) {
 
 if (saved) el("savedstate").textContent = "record loaded";
 if (PREVIEW) el("savedstate").textContent = "preview — not saved";
+
+/* ------------------------------------------------------- Matriculate Plus */
+
+function renderPlusState() {
+  const paid = isPaid();
+  const state = el("plusstate"), buy = el("plusbuy"), out = el("plussignout");
+  if (!state) return;
+  state.textContent = paid
+    ? "Plus is active in this browser. Cost, completion and graduate outcomes are showing on every card."
+    : "Everything the estimates are built on stays free. Plus adds the money and the outcomes.";
+  if (buy) buy.hidden = paid;
+  if (out) out.hidden = !paid;
+  el("pluskeymsg").textContent = paid ? `Licence ${licenceKey()} is active on this device.` : "";
+  el("share").disabled = !paid;
+  el("export").disabled = !paid;
+  el("export").title = paid ? "" : "Part of Matriculate Plus";
+  el("share").title = paid ? "" : "Part of Matriculate Plus";
+}
+
+const ENTITLEMENT_MESSAGE = {
+  not_entitled: "That key is not active. Check it against your receipt, or write to the address on the terms page.",
+  unreachable: "Could not reach the licence service. Your key is fine — try again in a moment.",
+  empty: "Paste the key from your receipt first.",
+  not_ready: "The payment went through but the licence is still being created. Give it a few seconds and try again.",
+  no_licence: "",
+};
+
+el("plusactivate")?.addEventListener("click", async () => {
+  const btn = el("plusactivate");
+  btn.disabled = true;
+  el("pluskeymsg").textContent = "Checking…";
+  const r = await activate(el("pluskey").value);
+  btn.disabled = false;
+  if (r.ok) {
+    el("pluskey").value = "";
+    say("Plus is active. Cost and outcomes are showing now.");
+    render();
+  } else {
+    el("pluskeymsg").textContent = ENTITLEMENT_MESSAGE[r.error] || "That did not work.";
+  }
+  renderPlusState();
+});
+
+el("plusbuy")?.addEventListener("click", async () => {
+  el("plusbuy").disabled = true;
+  const r = await beginCheckout();
+  if (!r.ok) {
+    el("plusbuy").disabled = false;
+    el("pluskeymsg").textContent = ENTITLEMENT_MESSAGE.unreachable;
+  }
+});
+
+el("plussignout")?.addEventListener("click", () => {
+  deactivate();
+  say("Licence removed from this browser. Your record and list are untouched.");
+  render();
+  renderPlusState();
+});
+
+/* Re-render whatever is on screen when the tier changes, so activating a
+   licence fills the cards in rather than waiting for the next interaction. */
+onEntitlementChange(() => { renderPlusState(); });
+
+/* Boot: restore a stored licence, and pick up one just bought. Stripe sends
+   the buyer back with the session id, which is exchanged for the key once. */
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const session = params.get("session");
+  if (params.get("paid") === "1" && session) {
+    const r = await claimFromSession(session);
+    say(r.ok
+      ? "Thank you — Plus is active on this device. Your licence key is on the Plus tab."
+      : ENTITLEMENT_MESSAGE[r.error] || "Payment received; the licence is still being created.");
+    history.replaceState(null, "", location.pathname);
+  } else {
+    await restoreEntitlement();
+  }
+  renderPlusState();
+  render();
+})();

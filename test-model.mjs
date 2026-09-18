@@ -15,6 +15,35 @@ import { costFor, INCOME_BANDS, costCount } from "./cost-model.js";
 import { MAJOR_CIP, MAJOR_CIP_ALSO, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
 import { POLICIES, POLICY_STATES, VERIFIED, policyFor, assistLink, matchSendingCollege } from "./transfer-policy.js";
 import { ASSIST_YEAR, ASSIST_RECEIVING, ASSIST_SENDING } from "./assist.js";
+import { activate, deactivate, isPaid, paidRows, listLimit, FREE_LIST_LIMIT } from "./entitlement.js";
+
+/* The paid tables are not in this bundle any more, so the tests that read them
+   have to get them the way a browser does. This stands in for the entitlement
+   API, serving the very files the Worker bundles, so the tests exercise the
+   real activate() path — parsing, joining and all — rather than a shortcut
+   around it. A bad licence gets the same 402 the Worker gives. */
+const PAID_BODY = JSON.stringify({
+  version: "test",
+  costs: readFileSync(new URL("./worker/data/costs.txt", import.meta.url), "utf8").trim(),
+  earnings: readFileSync(new URL("./worker/data/earnings.txt", import.meta.url), "utf8").trim(),
+});
+const GOOD_KEY = "MTRC-TEST0-TEST0-TEST0";
+globalThis.localStorage ??= (() => {
+  const m = new Map();
+  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k) };
+})();
+globalThis.fetch = async (url, init) => {
+  const auth = (init?.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+  if (String(url).endsWith("/v1/data"))
+    return auth === GOOD_KEY
+      ? { ok: true, status: 200, json: async () => JSON.parse(PAID_BODY) }
+      : { ok: false, status: 402, json: async () => ({ error: "not_entitled" }) };
+  return { ok: false, status: 404, json: async () => ({}) };
+};
+
+/* Most sections describe the app as a paying reader sees it, so the licence is
+   activated up front; the paywall section at the end takes it away again. */
+await activate(GOOD_KEY);
 
 let failures = 0, checks = 0;
 const fail = (msg) => { failures++; console.log("  FAIL  " + msg); };
@@ -681,7 +710,7 @@ await section("Best fits ordering", async () => {
 
 
 await section("Cost and completion", async () => {
-  ok(costCount > 500, `only ${costCount} schools carry cost data`);
+  ok(costCount() > 500, `only ${costCount()} schools carry cost data`);
   ok(INCOME_BANDS.length === 5, `expected five income bands, got ${INCOME_BANDS.length}`);
 
   let net = 0, grads = 0, banded = 0;
@@ -904,6 +933,50 @@ await section("Terms, privacy and notices", () => {
 
   /* The rebrand must be complete on every generated page. */
   ok(!/>TO</.test(html), "the pre-rebrand TO mark is still in index.html");
+});
+
+/* 20. The paywall: absent, not hidden.
+ *
+ * The property the whole design rests on is that a free browser does not hold
+ * the paid figures — so flipping a flag in a console buys an empty table, not
+ * a free ride. These assertions run last because they take the entitlement
+ * away, and they put it back before finishing. */
+await section("The paywall", async () => {
+  deactivate();
+  ok(!isPaid(), "deactivating left the tier paid");
+  ok(paidRows() === null, "paid rows survived deactivation");
+  ok(costCount() === 0, `a free browser holds cost data for ${costCount()} schools`);
+  ok(costFor(BY_NAME.get("Harvard University"), "48to75") === null, "costFor answered without a licence");
+  ok(listLimit() === FREE_LIST_LIMIT, `free list limit is ${listLimit()}`);
+
+  /* The free bundle itself must not contain the paid tables. This reads the
+     shipped files rather than the objects, because the question is what a
+     browser can see in view-source. */
+  const freeProg = readFileSync(new URL("./programs.js", import.meta.url), "utf8");
+  ok(!/,\d+,\d*,\d*,\d*;/.test(freeProg), "programs.js still carries money columns");
+  for (const f of ["costs.js"]) {
+    const shipped = readFileSync(new URL("./build-site.mjs", import.meta.url), "utf8");
+    ok(!new RegExp(`"${f}"`).test(shipped.split("const ASSETS")[1].split("]")[0]),
+      `${f} is still shipped to the browser`);
+  }
+
+  /* Programs keep their free half and lose only the money. */
+  const free = await loadPrograms();
+  const osu = BY_NAME.get("The Ohio State University");
+  const fp = free.at(osu, "psych");
+  ok(fp && fp.awards > 0, "degree counts vanished along with the paid figures");
+  ok(fp && fp.earn1 === null, "earnings survived without a licence");
+
+  /* A bad key is refused and changes nothing. */
+  ok((await activate("MTRC-WRONG-WRONG-WRONG")).ok === false, "a bad licence activated");
+  ok(costCount() === 0, "a rejected licence populated the table");
+
+  /* And it all comes back. */
+  ok((await activate(GOOD_KEY)).ok, "re-activating a good licence failed");
+  ok(costCount() > 500, "the table did not come back after re-activating");
+  ok(listLimit() === Infinity, "a paid licence still caps the list");
+  const back = await loadPrograms();
+  ok(back.at(osu, "psych").earn1 !== null, "earnings did not return after re-activating");
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

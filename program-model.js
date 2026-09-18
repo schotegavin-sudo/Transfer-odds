@@ -25,6 +25,7 @@
 
 import { SCHOOLS, BY_NAME } from "./model.js";
 import { LINK_ROWS } from "./links.js";
+import { paidRows } from "./entitlement.js";
 
 const CIP_BY_MAJOR = {};   /* filled by setCipMap, from the generated table */
 /* Fields that count only toward "does this school run this major". Never used
@@ -40,21 +41,47 @@ for (const line of LINK_ROWS.split("\n")) {
 }
 
 let cache = null;
+let cacheEarnings = null;   /* which earnings table the cache was built from */
 
 /* The data table is 350 KB, which nobody should pay for on a page they may
    never open. It is fetched the first time a program view is asked for. In the
    offline single-file build there is nothing to fetch, so the bundle hands the
    rows over on globalThis instead. */
 export async function loadPrograms() {
-  if (cache) return cache;
+  /* Rebuilt when the entitlement changes, so activating a licence fills the
+     money columns in without a reload — and losing one empties them. */
+  const earnings = paidRows()?.earnings || null;
+  if (cache && cacheEarnings === earnings) return cache;
   const mod = globalThis.__PROGRAM_DATA__ || await import("./programs.js");
-  cache = build(mod);
+  cache = build(mod, earnings);
+  cacheEarnings = earnings;
   return cache;
 }
 export const programsReady = () => cache;
 
-function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP, MAJOR_CIP_ALSO }) {
+function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP, MAJOR_CIP_ALSO }, earningsText) {
   setCipMap(MAJOR_CIP, MAJOR_CIP_ALSO);
+
+  /* Graduate earnings and debt are a paid feature and are not in the bundle:
+     the free tables carry degree counts only. When a licence has been
+     activated the entitlement API supplies them and they are joined back on
+     here, by unit id and federal field. Without it every money figure stays
+     null, which every reader of this data already handles — the Department
+     suppresses these figures for small cohorts, so absent is a case the code
+     has always had to render. */
+  const money = new Map();
+  if (earningsText) {
+    for (const line of earningsText.split("\n")) {
+      const [unitid, rest] = line.split(":");
+      if (!rest) continue;
+      const per = new Map();
+      for (const chunk of rest.split(";")) {
+        const [cip, e1, e2, dbt] = chunk.split(",");
+        per.set(cip, [e1, e2, dbt]);
+      }
+      money.set(unitid, per);
+    }
+  }
 
   const fields = new Map();
   for (const line of CIP_ROWS.split("\n")) {
@@ -141,10 +168,12 @@ function build({ CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP,
     if (!school) continue;
     const campusAwards = Number(total);
     const list = [];
+    const schoolMoney = money.get(unitid);
     for (const chunk of rest.split(";")) {
-      const [cip, n, e1, e2, dbt] = chunk.split(",");
+      const [cip, n] = chunk.split(",");
       const field = fields.get(cip);
       if (!field) continue;
+      const [e1, e2, dbt] = schoolMoney?.get(cip) || [];
       list.push({
         field, cip, campusAwards,
         awards: Number(n),

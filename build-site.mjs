@@ -22,7 +22,7 @@ const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/tr
 const TITLE = "Matriculate — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
-const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js", "cost-model.js", "costs.js", "assist.js", "transfer-policy.js"];
+const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js", "cost-model.js", "income-bands.js", "entitlement.js", "assist.js", "transfer-policy.js"];
 const SITE_FILES = ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "og.png", "fonts.css", "legal.css"];
 
 rmSync(dist, { recursive: true, force: true });
@@ -234,7 +234,7 @@ const singleFile = head
     .replace(/<title>[^<]*<\/title>/, "<title>Matriculate (offline copy)</title>")
   + body.replace(/<script type="module"[\s\S]*?<\/script>/, "")
   + `\n<script>\n(function () {\n"use strict";\n`
-  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "costs.js", "cost-model.js", "assist.js", "transfer-policy.js", "programs.js"].map(inline).join("\n")
+  + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "income-bands.js", "entitlement.js", "cost-model.js", "assist.js", "transfer-policy.js", "programs.js"].map(inline).join("\n")
   /* There is no second file to fetch here, so the program tables are handed to
      the loader directly instead of being imported. */
   + `\nglobalThis.__PROGRAM_DATA__ = { CIP_ROWS, STATE_ROWS, PROGRAM_ROWS, NATIONAL_AWARDS, MAJOR_CIP };\n`

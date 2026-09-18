@@ -1,0 +1,23 @@
+name = "matriculate-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# The paid tables are bundled as text at deploy time rather than stored in KV:
+# they are static between deploys, and a bundled import costs no read.
+rules = [
+  { type = "Text", globs = ["**/*.txt"], fallthrough = true }
+]
+
+# Filled in by `wrangler kv namespace create LICENCES`.
+[[kv_namespaces]]
+binding = "LICENCES"
+id = "REPLACE_WITH_KV_ID"
+
+[vars]
+# Comma-separated list of origins allowed to call this API.
+SITE = "https://schotegavin-sudo.github.io"
+PRICE_ID = "price_REPLACE"
+
+# Secrets are NOT set here. Set them once, from the terminal:
+#   wrangler secret put STRIPE_SECRET
+#   wrangler secret put STRIPE_WEBHOOK

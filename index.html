@@ -54,6 +54,9 @@
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"/><path d="M4 16c4 0 4-9 8-9s4 6 8 6"/></svg></span>
         <span class="navtext"><b>Method</b><small>How the number is produced</small></span>
       </button>
+      <button type="button" class="navitem" data-tab="plus" aria-current="false">
+        <span class="navtext"><b>Matriculate Plus</b><small>Cost, outcomes, unlimited list</small></span>
+      </button>
       <button type="button" class="navitem" data-tab="legal" aria-current="false">
         <span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h4"/></svg></span>
         <span class="navtext"><b>Terms of use</b><small>Terms, privacy and notices</small></span>
@@ -376,6 +379,47 @@
       </div>
     </section>
 
+    <section class="pane glass method" id="pane-plus" role="tabpanel" aria-label="Matriculate Plus" hidden>
+      <h2>Matriculate Plus</h2>
+      <p class="lede" id="plusstate">Everything the estimates are built on stays free. Plus adds the money and the outcomes.</p>
+
+      <div class="plusgrid">
+        <div class="pluscol">
+          <h3>Free, always</h3>
+          <ul class="ticks">
+            <li>Admission estimates for all 588 schools</li>
+            <li>Best fits, built from your record</li>
+            <li>How large each program is, and where it ranks</li>
+            <li>Deadlines and state transfer guarantees</li>
+            <li>A saved list of up to five schools</li>
+            <li>The offline copy</li>
+          </ul>
+        </div>
+        <div class="pluscol paid">
+          <h3>Plus</h3>
+          <ul class="ticks">
+            <li><b>Net price for your income band</b> — what a household like yours actually paid after grant aid, not the sticker</li>
+            <li><b>Graduation and retention rates</b></li>
+            <li><b>Graduate earnings and debt</b>, one and two years out, by program</li>
+            <li><b>An unlimited list</b></li>
+            <li><b>CSV export and share links</b></li>
+          </ul>
+          <p class="plusnote">These figures are not in this page. They are held by the entitlement API and sent only to a browser with a licence — so there is nothing here to unlock, and nothing being hidden from you.</p>
+          <p><button type="button" class="btn primary" id="plusbuy">Get Plus</button></p>
+        </div>
+      </div>
+
+      <h3>Already bought it?</h3>
+      <p class="sub">Paste the licence key from your receipt. It is stored in this browser, like your record, and sent to the licence API and nowhere else.</p>
+      <div class="keyrow">
+        <label class="visually-hidden" for="pluskey">Licence key</label>
+        <input type="text" id="pluskey" placeholder="MTRC-XXXXX-XXXXX-XXXXX" autocomplete="off" spellcheck="false">
+        <button type="button" class="btn" id="plusactivate">Activate</button>
+      </div>
+      <p class="sub" id="pluskeymsg" role="status" aria-live="polite"></p>
+      <p><button type="button" class="btn sm" id="plussignout" hidden>Remove this licence from this browser</button></p>
+    </section>
+
     <section class="pane glass method" id="pane-legal" role="tabpanel" aria-label="Terms of use" hidden>
       <h2>Terms, privacy and notices</h2>
       <nav class="docnav">
@@ -506,6 +550,8 @@
     </section>
   </div>
 </div>
+
+<p class="notice" id="notice" role="status" aria-live="polite"></p>
 
 <footer class="siteft">
   <span>Matriculate — a planning tool, not a prediction.</span>

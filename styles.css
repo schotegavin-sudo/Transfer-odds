@@ -1023,3 +1023,65 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 @media (max-height: 760px) and (min-width: 1000px) {
   #pane-record { position: static; }
 }
+
+/* ---------------------------------------------------- paid tier ---------- */
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* The locked state is a statement, not a tease: no blur, no fake numbers
+   behind a scrim. It says what the figures are and that they are not here. */
+.locked {
+  border: 1px solid var(--glass-edge);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 0 0 8px;
+}
+.locked p { margin: 0 0 8px; font-size: 0.8125rem; color: var(--ink-2); max-width: 62ch; line-height: 1.55; }
+.locked p:last-child { margin-bottom: 0; }
+.locked b { color: var(--ink); }
+.lockwhy { font-size: 0.75rem !important; color: var(--ink-3) !important; }
+
+.notice {
+  position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 12px);
+  z-index: 60; max-width: min(92vw, 60ch); margin: 0;
+  padding: 11px 16px; border-radius: 10px;
+  background: var(--ink); color: var(--ground);
+  font-size: 0.8125rem; line-height: 1.5;
+  box-shadow: 0 8px 28px rgb(0 0 0 / .22);
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.notice.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .notice { transition: none; } }
+
+.plusgrid { display: grid; gap: 16px; grid-template-columns: 1fr; margin: 16px 0 24px; }
+@media (min-width: 760px) { .plusgrid { grid-template-columns: 1fr 1fr; } }
+.pluscol {
+  border: 1px solid var(--glass-edge); border-radius: 12px; padding: 18px;
+  background: var(--glass);
+}
+.pluscol.paid { border-color: var(--accent); background: var(--accent-wash); }
+.pluscol h3 { margin: 0 0 12px; font-size: 0.9375rem; }
+.ticks { list-style: none; margin: 0 0 12px; padding: 0; }
+.ticks li {
+  position: relative; padding: 0 0 8px 22px;
+  font-size: 0.8125rem; color: var(--ink-2); line-height: 1.55; max-width: 52ch;
+}
+.ticks li::before {
+  content: ""; position: absolute; left: 4px; top: 7px;
+  width: 9px; height: 5px; border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent); transform: rotate(-45deg);
+}
+.ticks b { color: var(--ink); }
+.plusnote { font-size: 0.75rem; color: var(--ink-3); max-width: 56ch; line-height: 1.55; }
+
+.keyrow { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.keyrow input {
+  flex: 1 1 22ch; min-width: 0; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: .04em;
+}

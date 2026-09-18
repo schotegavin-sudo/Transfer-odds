@@ -20,7 +20,8 @@
  *   finish is telling you something real — but it is not their rate.
  */
 
-import { COST_ROWS, INCOME_BANDS } from "./costs.js";
+import { INCOME_BANDS } from "./income-bands.js";
+import { paidRows } from "./entitlement.js";
 import { BY_NAME } from "./model.js";
 import { LINK_ROWS } from "./links.js";
 
@@ -43,20 +44,39 @@ for (const line of LINK_ROWS.split("\n")) {
 const dollars = (v) => (v === "" || v === undefined ? null : Number(v) * 100);
 const percent = (v) => (v === "" || v === undefined ? null : Number(v));
 
-const BY_SCHOOL = new Map();
-for (const line of COST_ROWS.split("\n")) {
-  const f = line.split("|");
-  const school = COST_BY_UNITID.get(f[0]);
-  if (!school) continue;
-  BY_SCHOOL.set(school.name, {
-    net: dollars(f[1]),
-    byBand: [dollars(f[2]), dollars(f[3]), dollars(f[4]), dollars(f[5]), dollars(f[6])],
-    tuitionIn: dollars(f[7]),
-    tuitionOut: dollars(f[8]),
-    gradRate: percent(f[9]),
-    retention: percent(f[10]),
-  });
+let BY_SCHOOL = new Map();
+let builtFrom = null;
+
+/* Built on demand from whatever the entitlement layer is currently holding,
+   and rebuilt if that changes — activating a licence mid-session has to light
+   the figures up without a reload. */
+function table() {
+  const rows = paidRows();
+  if (!rows || !rows.costs) { builtFrom = null; BY_SCHOOL = new Map(); return BY_SCHOOL; }
+  if (builtFrom === rows.costs) return BY_SCHOOL;
+
+  const built = new Map();
+  for (const line of rows.costs.split("\n")) {
+    const f = line.split("|");
+    const school = COST_BY_UNITID.get(f[0]);
+    if (!school) continue;
+    built.set(school.name, {
+      net: dollars(f[1]),
+      byBand: [dollars(f[2]), dollars(f[3]), dollars(f[4]), dollars(f[5]), dollars(f[6])],
+      tuitionIn: dollars(f[7]),
+      tuitionOut: dollars(f[8]),
+      gradRate: percent(f[9]),
+      retention: percent(f[10]),
+    });
+  }
+  builtFrom = rows.costs;
+  BY_SCHOOL = built;
+  return BY_SCHOOL;
 }
+
+/* How many schools the loaded table covers — the tests assert this is zero
+   without a licence, which is the property the paywall rests on. */
+export const costCount = () => table().size;
 
 /* What this school costs a household in the given band.
  *
@@ -64,7 +84,7 @@ for (const line of COST_ROWS.split("\n")) {
  * Department did not publish that band, and says which it gave back so the
  * page can label it honestly rather than passing an average off as personal. */
 export function costFor(school, band) {
-  const row = BY_SCHOOL.get(school.name);
+  const row = table().get(school.name);
   if (!row) return null;
 
   const i = BAND_INDEX[band];
@@ -91,5 +111,4 @@ export function costFor(school, band) {
   };
 }
 
-export const hasCost = (school) => BY_SCHOOL.has(school.name);
-export const costCount = BY_SCHOOL.size;
+export const hasCost = (school) => table().has(school.name);
