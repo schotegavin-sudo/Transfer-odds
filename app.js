@@ -56,8 +56,14 @@ const BLANK = {
 /* Built once: everything each school can be found by. */
 const INDEX = new Map(SCHOOLS.map((s) => [s.name, searchIndex(s, STATE_NAMES[s.state])]));
 
-const KEY = "transfer-odds:v1";
-const SEEN_KEY = "transfer-odds:walkthrough:v1";
+const KEY = "matriculate:v1";
+const SEEN_KEY = "matriculate:walkthrough:v1";
+/* The site was called Transfer Odds when this key name was chosen. Read-only
+   fallbacks so a record or a "seen the walkthrough" flag saved under the old
+   name is not simply gone — the first save under either afterward moves it to
+   the new key on its own, with nothing to run once and nothing to clean up. */
+const OLD_KEY = "transfer-odds:v1";
+const OLD_SEEN_KEY = "transfer-odds:walkthrough:v1";
 /* ?fresh — the whole page behaves as though this browser had never been here:
    the walkthrough runs on every load, the answers start blank, and nothing is
    written to storage, so a real record survives being previewed over. It is
@@ -70,7 +76,7 @@ let viewingShared = false;
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (!p.majorId && p.major) p.majorId = LEGACY_MAJOR[p.major] || "undeclared";
@@ -1098,7 +1104,7 @@ function endWalkthrough({ finished } = {}) {
 
 function seenWalkthrough() {
   if (PREVIEW) return false;
-  try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return true; }
+  try { return localStorage.getItem(SEEN_KEY) === "1" || localStorage.getItem(OLD_SEEN_KEY) === "1"; } catch { return true; }
 }
 
 /* Whether to open the questions unprompted.
@@ -1242,7 +1248,7 @@ el("export").addEventListener("click", async () => {
     ].join(",")),
   ].join("\n");
 
-  const filename = `transfer-odds-${major ? major.id : "list"}.csv`;
+  const filename = `matriculate-${major ? major.id : "list"}.csv`;
 
   /* Inside a claude.ai artifact the viewer sandbox blocks ordinary downloads,
      so the runtime hands the file over instead. On the public site there is no

@@ -1,8 +1,8 @@
 {
-  "name": "transfer-odds",
+  "name": "matriculate",
   "version": "1.0.0",
   "private": true,
-  "description": "Transfer admission odds for 588 US colleges, scored against the applicant pool you would actually compete with.",
+  "description": "Matriculate — transfer admission odds for 588 US colleges, scored against the applicant pool you would actually compete with.",
   "type": "module",
   "license": "MIT",
   "scripts": {

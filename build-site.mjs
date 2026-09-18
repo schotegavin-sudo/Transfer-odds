@@ -1,4 +1,4 @@
-/* Builds the deployable site into transfer-odds/dist/.
+/* Builds the deployable site into dist/.
  *
  * index.html in this folder is the artifact source: a body fragment, because
  * claude.ai supplies the document around it. A public page needs the whole
@@ -19,7 +19,7 @@ const dist = join(here, "dist");
 const site = join(here, "site");
 
 const SITE_URL = (process.env.SITE_URL || "https://schotegavin-sudo.github.io/transfer-odds").replace(/\/$/, "");
-const TITLE = "Transfer Odds — transfer admission chances at 588 US colleges";
+const TITLE = "Matriculate — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
 const ASSETS = ["styles.css", "app.js", "model.js", "data.js", "majors.js", "aliases.js", "links.js", "deadlines.js", "share.js", "program-model.js", "programs.js", "fit.js"];
@@ -67,13 +67,13 @@ const head = `<!doctype html>
 <meta name="theme-color" content="#080B1A" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${SITE_URL}/">
-<meta property="og:title" content="Transfer Odds">
+<meta property="og:title" content="Matriculate">
 <meta property="og:description" content="${DESC}">
 <meta property="og:image" content="${SITE_URL}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Transfer Odds">
+<meta name="twitter:title" content="Matriculate">
 <meta name="twitter:description" content="${DESC}">
 <meta name="twitter:image" content="${SITE_URL}/og.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -85,7 +85,7 @@ const head = `<!doctype html>
 <script type="application/ld+json">${JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Transfer Odds",
+  name: "Matriculate",
   applicationCategory: "EducationalApplication",
   operatingSystem: "Any",
   url: SITE_URL + "/",
@@ -115,8 +115,8 @@ const pageBody = body
 writeFileSync(join(dist, "index.html"), head + pageBody + tail);
 
 writeFileSync(join(dist, "manifest.webmanifest"), JSON.stringify({
-  name: "Transfer Odds",
-  short_name: "Transfer Odds",
+  name: "Matriculate",
+  short_name: "Matriculate",
   description: DESC,
   start_url: "./",
   scope: "./",
@@ -133,7 +133,7 @@ writeFileSync(join(dist, "manifest.webmanifest"), JSON.stringify({
 
 /* Network-first for the page so a deploy is picked up immediately;
    cache-first for the modules, which are versioned with the build. */
-writeFileSync(join(dist, "sw.js"), `const CACHE = "transfer-odds-${version}";
+writeFileSync(join(dist, "sw.js"), `const CACHE = "matriculate-${version}";
 /* programs.js is deliberately not precached: it is 370 KB that most visits
    never ask for, and the fetch handler caches it the first time one does. */
 const ASSETS = ${JSON.stringify(["./", "index.html", ...shipped.filter((f) => f !== "programs.js"), "manifest.webmanifest"])};
@@ -196,7 +196,7 @@ const singleFile = head
     .replace(/<link rel="manifest"[^>]*>\n?/, "")
     .replace(/<link rel="icon"[^>]*>\n?/, "")
     .replace(/<link rel="apple-touch-icon"[^>]*>\n?/, "")
-    .replace(/<title>[^<]*<\/title>/, "<title>Transfer Odds (offline copy)</title>")
+    .replace(/<title>[^<]*<\/title>/, "<title>Matriculate (offline copy)</title>")
   + body.replace(/<script type="module"[\s\S]*?<\/script>/, "")
   + `\n<script>\n(function () {\n"use strict";\n`
   + ["data.js", "majors.js", "model.js", "aliases.js", "links.js", "deadlines.js", "share.js", "programs.js"].map(inline).join("\n")
@@ -206,7 +206,7 @@ const singleFile = head
   + ["program-model.js", "fit.js", "app.js"].map(inline).join("\n")
   + `\n})();\n</script>\n</body>\n</html>\n`;
 
-writeFileSync(join(dist, "transfer-odds-offline.html"), singleFile);
+writeFileSync(join(dist, "matriculate-offline.html"), singleFile);
 
 /* Terms and privacy also exist as their own URLs, for crawlers and for anyone
    linking to them directly. They are extracted from the in-app legal pane, so
@@ -225,9 +225,9 @@ const legalDoc = (id) => {
 };
 
 for (const [file, id, title, desc] of [
-  ["terms.html", "terms", "Terms of use — Transfer Odds", "What Transfer Odds is, what it is not, and the terms it is offered under."],
-  ["privacy.html", "privacy", "Privacy — Transfer Odds", "Transfer Odds collects nothing. Your record stays in your own browser."],
-  ["notices.html", "notices", "Notices — Transfer Odds", "Licences, data sources and attributions for Transfer Odds."],
+  ["terms.html", "terms", "Terms of use — Matriculate", "What Matriculate is, what it is not, and the terms it is offered under."],
+  ["privacy.html", "privacy", "Privacy — Matriculate", "Matriculate collects nothing. Your record stays in your own browser."],
+  ["notices.html", "notices", "Notices — Matriculate", "Licences, data sources and attributions for Matriculate."],
 ]) {
   const doc = legalDoc(id);
   if (!doc) { console.warn(`  note: no #${id} article in index.html`); continue; }
@@ -235,7 +235,7 @@ for (const [file, id, title, desc] of [
 <header class="topbar glass">
   <div class="brand">
     <span class="mark" aria-hidden="true">TO</span>
-    <div><span class="brandname">Transfer Odds</span><p class="counts">${title.split(" — ")[0]}</p></div>
+    <div><span class="brandname">Matriculate</span><p class="counts">${title.split(" — ")[0]}</p></div>
   </div>
 </header>
 <div class="doc"><div class="glass">
@@ -243,7 +243,7 @@ for (const [file, id, title, desc] of [
   ${doc.replace(/<h3>/, "<h1>").replace(/<\/h3>/, "</h1>").replace(/<h4>/g, "<h2>").replace(/<\/h4>/g, "</h2>")}
 </div></div>
 <footer class="siteft">
-  <span>Transfer Odds — a planning tool, not a prediction.</span>
+  <span>Matriculate — a planning tool, not a prediction.</span>
   <span><a href="./">Calculator</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="notices.html">Notices</a></span>
 </footer>
 </body>
@@ -252,6 +252,16 @@ for (const [file, id, title, desc] of [
 }
 
 writeFileSync(join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+
+/* GitHub Pages serves a custom domain once a CNAME file is present at the site
+   root. Only written when SITE_URL actually names one — the default *.github.io
+   fallback needs no such file, and writing one for it would point Pages at a
+   domain it does not own. */
+const siteHost = new URL(SITE_URL).hostname;
+if (!/\.github\.io$/.test(siteHost)) {
+  writeFileSync(join(dist, "CNAME"), siteHost + "\n");
+  console.log(`  CNAME -> ${siteHost}`);
+}
 writeFileSync(join(dist, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_URL}/</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>
@@ -265,11 +275,11 @@ writeFileSync(join(dist, "404.html"), head + `<div class="aurora" aria-hidden="t
   <div class="glass" style="padding:40px;text-align:center;max-width:44ch">
     <h1 style="font-family:var(--display);font-size:28px;margin-bottom:8px">Nothing here</h1>
     <p style="color:var(--ink-2);margin:0 0 20px">That page does not exist. The calculator is one page.</p>
-    <a class="btn primary" href="./" style="display:inline-block;text-decoration:none">Open Transfer Odds</a>
+    <a class="btn primary" href="./" style="display:inline-block;text-decoration:none">Open Matriculate</a>
   </div>
 </div>
 </body></html>`);
 writeFileSync(join(dist, ".nojekyll"), "");
 
 console.log(`built dist/ — ${SITE_URL} — cache ${version}`);
-console.log(`  ${["index.html", "transfer-odds-offline.html", "manifest.webmanifest", "sw.js", "robots.txt", "sitemap.xml", "404.html", ...shipped].join(", ")}`);
+console.log(`  ${["index.html", "matriculate-offline.html", "manifest.webmanifest", "sw.js", "robots.txt", "sitemap.xml", "404.html", ...shipped].join(", ")}`);

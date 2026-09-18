@@ -71,11 +71,11 @@ await shoot({
   </div>
   <div>
     <div class="tag">588 schools · 154 majors</div>
-    <h1>Transfer Odds</h1>
+    <h1>Matriculate</h1>
     <p>Your chances at each school, scored against the transfer applicants you would actually compete with.</p>
   </div>
 </div>`,
 });
 
 await browser.close();
-console.log("images written to transfer-odds/site/");
+console.log("images written to site/");

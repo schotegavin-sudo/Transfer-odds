@@ -2,7 +2,7 @@
 
 ## This project
 
-Code in `transfer-odds/` is © 2026 Gavin Schote, released under the MIT License
+This code is © 2026 Gavin Schote, released under the MIT License
 (see `LICENSE`).
 
 The reference tables in `data.js` and `majors.js` are compilations of factual

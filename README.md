@@ -1,4 +1,4 @@
-# Transfer Odds Worksheet
+# Matriculate
 
 A single-page tool that estimates transfer-admission odds at 588 US institutions,
 including primarily-online campuses, from one saved student record.
@@ -337,7 +337,7 @@ SITE_URL=https://yourdomain.com npm run build
 npx serve dist                     # or: cd dist && python3 -m http.server
 ```
 
-`dist/transfer-odds-offline.html` is the whole app in one file — stylesheet
+`dist/matriculate-offline.html` is the whole app in one file — stylesheet
 inlined, the four modules concatenated into one classic script — so it opens by
 double-clicking, with no server. ES modules refuse to load over `file://`, which
 is why that build exists separately.

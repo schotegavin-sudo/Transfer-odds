@@ -1,4 +1,4 @@
-/* Transfer Odds Worksheet — institution reference table.
+/* Matriculate — institution reference table.
  *
  * Row format (pipe-delimited):
  *   name | state | control | online | transferAdmitRate% | confidence | typicalGPA | maxCredits | tags
