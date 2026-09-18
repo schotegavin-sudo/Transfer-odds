@@ -41,6 +41,23 @@ tuition, and the federal graduation and retention rates. Public domain, every
 figure as published, nothing interpolated. Regenerate with
 `node tools/build-costs.mjs`.
 
+`transfer-policy.js` summarises statewide transfer guarantees from each state's
+own governing body. Every entry carries the URL it was read from and the date it
+was checked. Statutes and public policy documents are not copyrightable; the
+summaries are this project's own wording and are not the policy itself, which is
+why each one links out to the page that governs.
+
+`assist.js` carries **no ASSIST content**. ASSIST is the official repository of
+articulation for California's public colleges and universities, operated by the
+Regents of the University of California on behalf of the California Community
+Colleges, the California State University and the University of California, and
+its articulation content is copyrighted by the Regents. This project stores only
+institution identifiers and the current academic year, taken from ASSIST's own
+public institution list, and uses them to construct links into assist.org so a
+reader lands on the agreement itself rather than on a copy of it that would go
+stale. Regenerate with `node tools/build-assist.mjs`.
+  - https://assist.org/
+
 ## Institution names
 
 College and university names appear solely to identify the institutions the

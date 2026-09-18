@@ -269,7 +269,7 @@ for (const [file, id, title, desc] of [
   writeFileSync(join(dist, file), legalHead(title, desc, file) + `<div class="aurora" aria-hidden="true"><b></b><b></b><b></b></div>
 <header class="topbar glass">
   <div class="brand">
-    <span class="mark" aria-hidden="true">TO</span>
+    <span class="mark" aria-hidden="true">M</span>
     <div><span class="brandname">Matriculate</span><p class="counts">${title.split(" — ")[0]}</p></div>
   </div>
 </header>

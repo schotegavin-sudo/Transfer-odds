@@ -4,6 +4,7 @@
  * label, which let one input contribute two lines that disagreed with each
  * other. Every property below is something a user would notice if it broke.
  */
+import { readFileSync } from "fs";
 import { SCHOOLS, MAJORS, MAJOR_BY_ID, BY_NAME, score, levers, poolFor, majorRate, Phi, probit } from "./model.js";
 import { ALIASES, acronym, searchIndex, matches, relevance } from "./aliases.js";
 import { deadlineFor, daysUntil, verifyLinks, LINKS } from "./deadlines.js";
@@ -857,6 +858,52 @@ await section("ASSIST links", () => {
     const m = matchSendingCollege(name);
     ok(m && m.name === name, `"${name}" did not match itself`);
   }
+});
+
+/* 19. The legal documents describe the site that exists.
+ *
+ * Terms and privacy pages rot silently: a feature ships, the document still
+ * describes the old behaviour, and nobody notices until it matters. These
+ * assertions tie the prose to things the code can actually check. */
+await section("Terms, privacy and notices", () => {
+  const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  const appjs = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  const doc = (id) => {
+    const a = html.indexOf(`<article class="legaldoc" id="${id}"`);
+    ok(a > 0, `no #${id} article in index.html`);
+    return html.slice(a, html.indexOf("</article>", a));
+  };
+  const terms = doc("terms"), privacy = doc("privacy"), notices = doc("notices");
+
+  /* No placeholder may ever reach a published page. */
+  ok(!/REPLACE@|EXAMPLE\.COM|TODO|FIXME|Lorem ipsum/i.test(html), "a placeholder survived into index.html");
+  for (const [name, d] of [["terms", terms], ["privacy", privacy], ["notices", notices]])
+    ok(/mailto:[^"]+@[^"]+\.[a-z]{2,}/.test(d), `${name} carries no contact address`);
+
+  /* Every storage key the app writes must be named in the privacy document,
+     and the document must not name keys the app no longer uses. */
+  const keysInApp = [...appjs.matchAll(/"((?:matriculate|transfer-odds):[a-z0-9:]+)"/g)].map((m) => m[1]);
+  ok(keysInApp.length >= 2, `found only ${keysInApp.length} storage keys in app.js`);
+  for (const k of new Set(keysInApp))
+    ok(privacy.includes(k), `privacy does not mention the storage key ${k}`);
+  for (const m of privacy.matchAll(/<code>((?:matriculate|transfer-odds):[a-z0-9:]+)<\/code>/g))
+    ok(keysInApp.includes(m[1]), `privacy names ${m[1]}, which app.js no longer uses`);
+
+  /* Terms must name every substantive thing the app now does. Each of these
+     shipped after the first draft of the document. */
+  for (const claim of ["Net price", "graduation", "earnings", "Deadlines", "Transfer guarantees", "ASSIST", "College Scorecard"])
+    ok(terms.includes(claim), `terms never mention ${claim}`);
+
+  /* The reverse: a claim the app outgrew. It now reads the federal program
+     tables and hides schools that report no degrees in the chosen major. */
+  ok(!/does not know which majors/i.test(html), "a page still claims the app cannot tell which majors a campus offers");
+
+  /* ASSIST content is linked, never copied — the notices must say so. */
+  ok(/not reproduced here|no ASSIST content/i.test(notices), "notices do not state that ASSIST content is not reproduced");
+  ok(notices.includes("Regents"), "notices do not attribute ASSIST to the Regents");
+
+  /* The rebrand must be complete on every generated page. */
+  ok(!/>TO</.test(html), "the pre-rebrand TO mark is still in index.html");
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

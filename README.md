@@ -462,14 +462,19 @@ address to a third party on page load, which a German court held breached the
 GDPR (LG Muenchen I, 3 O 17493/20). Self-hosting removes the request, which is
 what lets the privacy page say truthfully that the site contacts no one.
 
-**Terms of use** (`site/terms.body.html`) and **privacy** (`site/privacy.body.html`)
-build into `terms.html` and `privacy.html`. Neither is legally mandated for a
-free static site that collects nothing, but the terms carry the disclaimer of
+**Terms of use**, **privacy** and **notices** are written once, as the three
+`<article class="legaldoc">` blocks in `index.html`, and `build-site.mjs` lifts
+each one into its own standalone page (`terms.html`, `privacy.html`,
+`notices.html`). Editing them in one place is the point: the in-app pane and the
+standalone page can never drift apart. None is legally mandated for a free
+static site that collects nothing, but the terms carry the disclaimer of
 warranty, the limitation of liability and the "this is not advice" statement
 that matter for a tool people make decisions with.
 
-Both files contain `REPLACE@EXAMPLE.COM` and a hosting-provider placeholder.
-Fill those in before publishing.
+They describe the site as it actually behaves, which means they have to be
+re-read whenever a feature lands. Anything that changes what is stored, what is
+sent, where data comes from, or what the site claims to know belongs in them
+before it ships.
 
 This is not legal advice. For anything with money, ads, or user accounts
 attached, talk to a lawyer.
