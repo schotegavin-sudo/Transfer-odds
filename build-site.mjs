@@ -99,8 +99,28 @@ const head = `<!doctype html>
 const tail = `
 <script type="module" src="app.js"></script>
 <script>
+/* A deploy has to reach someone who already has the site cached, and the
+   previous version of this could not: it registered sw.js through the HTTP
+   cache, so a ten-minute max-age meant the new worker was often never even
+   discovered, and nothing reloaded the page once it was. Three things fix it —
+   updateViaCache so the worker script is always revalidated, an explicit
+   update() on load, and a single reload when a new worker takes over. The
+   reload is guarded on there having been a controller already, so a first
+   visit does not bounce. */
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  addEventListener("load", async () => {
+    const had = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!had || reloading) return;
+      reloading = true;
+      location.reload();
+    });
+    try {
+      const reg = await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
+      reg.update();
+    } catch {}
+  });
 }
 </script>
 </body>
@@ -131,8 +151,8 @@ writeFileSync(join(dist, "manifest.webmanifest"), JSON.stringify({
   ],
 }, null, 2));
 
-/* Network-first for the page so a deploy is picked up immediately;
-   cache-first for the modules, which are versioned with the build. */
+/* Network-first throughout, so a deploy is live on the next load rather than
+   whenever a cache happens to be evicted. */
 writeFileSync(join(dist, "sw.js"), `const CACHE = "matriculate-${version}";
 /* programs.js is deliberately not precached: it is 370 KB that most visits
    never ask for, and the fetch handler caches it the first time one does. */
@@ -149,19 +169,18 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
-  if (req.mode === "navigate") {
-    e.respondWith(fetch(req).then((r) => {
-      const copy = r.clone();
-      caches.open(CACHE).then((c) => c.put(req, copy));
-      return r;
-    }).catch(() => caches.match(req).then((r) => r || caches.match("index.html"))));
-    return;
-  }
-  e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => {
+  /* Network-first for everything this build produces. It used to be cache-first
+     for the modules, on the theory that they were versioned with the build —
+     they are not, they are plain styles.css and app.js, so a stale cache served
+     an old look indefinitely. The cache is the offline copy here, not the
+     source of truth; the browser's own HTTP cache still spares most of the
+     round trips. */
+  e.respondWith(fetch(req).then((r) => {
     const copy = r.clone();
     caches.open(CACHE).then((c) => c.put(req, copy));
     return r;
-  })));
+  }).catch(() => caches.match(req).then((r) =>
+    r || (req.mode === "navigate" ? caches.match("index.html") : undefined))));
 });
 `);
 
