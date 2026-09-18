@@ -36,17 +36,17 @@ export function deadlineFor(school, term = "fall") {
 
   if (UC.test(school.name)) {
     return spring
-      ? { kind: "none", label: "Most UC campuses admit transfers for fall only", short: "Fall only" }
-      : { kind: "verified", date: "11-30", label: "Filing period 1–30 November", short: "30 Nov",
+      ? { kind: "verified", date: "07-31", label: "Winter/spring filing period 1–31 July, at select campuses only", short: "31 Jul",
+          source: "UC system-wide filing period — most campuses admit transfers for fall only" }
+      : { kind: "verified", date: "11-30", label: "Filing period 1 October – 30 November", short: "30 Nov",
           source: "University of California system-wide filing period" };
   }
 
   if (CSU.test(school.name)) {
     return spring
-      ? { kind: "verified", date: "08-31", label: "Spring filing period opens 1 August at participating campuses", short: "31 Aug",
-          source: "Cal State Apply filing period" }
+      ? { kind: "typical", label: "Spring admission is limited and campus by campus — the window has opened in August in past cycles", short: "Typically Aug" }
       : { kind: "verified", date: "11-30", label: "Filing period 1 October – 30 November", short: "30 Nov",
-          source: "Cal State Apply filing period" };
+          source: "Cal State Apply priority filing period" };
   }
 
   /* Everything else is a period, not a date. */

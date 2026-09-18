@@ -12,6 +12,7 @@ import { loadPrograms, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS, costCount } from "./cost-model.js";
 import { MAJOR_CIP, MAJOR_CIP_ALSO, CIP_ROWS, PROGRAM_ROWS } from "./programs.js";
+import { POLICIES, POLICY_STATES, VERIFIED, policyFor } from "./transfer-policy.js";
 
 let failures = 0, checks = 0;
 const fail = (msg) => { failures++; console.log("  FAIL  " + msg); };
@@ -743,6 +744,66 @@ await section("Cost and completion", async () => {
   const code = await encodeProfile(withProfile({ income: "over110" }));
   const back = await decodeProfile(code);
   ok(!back.income, `a shared link carried income back as ${JSON.stringify(back.income)}`);
+});
+
+/* 17. Transfer guarantees: a citation, or nothing at all.
+ *
+ * This is the section where a wrong answer costs someone a year, so the tests
+ * are about restraint rather than coverage: every claim carries a live-looking
+ * primary source, and the function refuses to speak outside the three
+ * conditions the policies actually cover. */
+await section("Transfer guarantees", () => {
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(VERIFIED), `VERIFIED is malformed: ${VERIFIED}`);
+  ok(POLICY_STATES.length > 0, "no policies at all");
+
+  for (const st of POLICY_STATES) {
+    const p = POLICIES[st];
+    ok(/^[A-Z]{2}$/.test(st), `"${st}" is not a state code`);
+    for (const k of ["name", "scope", "admission", "credits", "source", "authority"])
+      ok(typeof p[k] === "string" && p[k].length > 0, `${st}: missing ${k}`);
+    /* Every source must be a government or system domain — no blogs, no
+       aggregators, no search results. */
+    const host = new URL(p.source).host;
+    ok(p.source.startsWith("https://"), `${st}: source is not https`);
+    ok(/\.(gov|edu|org)$/.test(host), `${st}: source host ${host} is not an official domain`);
+    ok(["public", "csu", "suny", "unc", "participating", "agreement"].includes(p.scope),
+      `${st}: unknown scope ${p.scope}`);
+  }
+
+  const inState = (st) => SCHOOLS.find((s) => s.state === st && s.control === "pub");
+
+  /* The three refusals. */
+  const osu = BY_NAME.get("The Ohio State University");
+  if (osu) {
+    ok(policyFor(osu, withProfile({ state: "OH" })) !== null, "Ohio: a covered school returned nothing");
+    ok(policyFor(osu, withProfile({ state: "OH", curtype: "four" })) === null,
+      "Ohio: a four-year origin was told the community college guarantee applies");
+    ok(policyFor(osu, withProfile({ state: "CA" })) === null,
+      "a Californian was told Ohio's guarantee reaches Ohio State");
+  }
+  for (const st of ["WY", "MT", "ND"]) {
+    const s = inState(st);
+    if (s) ok(policyFor(s, withProfile({ state: st })) === null, `${st} has no policy on record but answered anyway`);
+  }
+
+  /* Scope has to bite: a private school in a public-scope state is outside it. */
+  const xavier = SCHOOLS.find((s) => s.state === "OH" && s.control !== "pub");
+  if (xavier) {
+    const r = policyFor(xavier, withProfile({ state: "OH" }));
+    ok(r && r.binds === false, `${xavier.name}: a private Ohio school read as covered by Ohio Transfer 36`);
+  }
+  const csulb = BY_NAME.get("California State University, Long Beach");
+  if (csulb) ok(policyFor(csulb, withProfile({ state: "CA" }))?.binds === true, "CSU Long Beach is not reading as an ADT campus");
+  const usc = BY_NAME.get("University of Southern California");
+  if (usc) ok(policyFor(usc, withProfile({ state: "CA" }))?.binds === false, "USC read as bound by the CSU ADT");
+
+  /* Where participation is a choice, the app must say "check", never "yes". */
+  for (const st of POLICY_STATES) {
+    if (!["participating", "agreement"].includes(POLICIES[st].scope)) continue;
+    const s = inState(st);
+    if (s) ok(policyFor(s, withProfile({ state: st }))?.binds === null,
+      `${st}: an opt-in policy asserted coverage instead of asking the reader to check`);
+  }
 });
 
 console.log(`\n${checks} checks, ${failures} failed`);

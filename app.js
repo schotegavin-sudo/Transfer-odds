@@ -8,6 +8,7 @@ import { shareLink, decodeProfile, readHash } from "./share.js";
 import { loadPrograms, programsReady, PROGRAM_SORTS } from "./program-model.js";
 import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS } from "./cost-model.js";
+import { policyFor } from "./transfer-policy.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -315,6 +316,42 @@ function costSection(s) {
   }
 
   return `<h4>Cost and completion</h4><table class="ledger"><tbody>${rows.join("")}</tbody></table>`;
+}
+
+/* Will my credits transfer.
+ *
+ * Course-by-course articulation is not public data anywhere in the country, so
+ * this section does not pretend to answer per course. What it answers is the
+ * layer that IS in statute: whether your state guarantees admission, junior
+ * standing, or a general education block, and whether this particular school is
+ * bound by it. Where a state has no such policy on record, the section is not
+ * rendered at all — an empty space being more honest than a hedge.
+ */
+function transferSection(s) {
+  const p = policyFor(s, profile);
+  if (!p) return "";
+
+  const verdict =
+    p.binds === true
+      ? `<span class="flag good">this school is covered</span>`
+      : p.binds === false
+      ? `<span class="flag warn">this school is outside it</span>`
+      : `<span class="flag">participation is per-institution — check</span>`;
+
+  /* A definition list rather than the numeric ledger used elsewhere: here the
+     prose IS the value, and the ledger drops its note column on phones. */
+  const rows = [
+    ["Admission", p.admission],
+    ["Credit", p.credits],
+    ...(p.note ? [["Note", p.note]] : []),
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+
+  return `<h4>Will my credits transfer</h4>
+    <p class="policyline"><b>${esc(p.name)}</b> ${verdict}
+      <small>${esc(p.authority)} · read ${esc(p.verified)}</small></p>
+    <dl class="policy">${rows}</dl>
+    <p class="sources"><a href="${p.source}" target="_blank" rel="noopener noreferrer">Read the policy itself<small>${
+      esc(new URL(p.source).host.replace(/^www\./, ""))} — the wording that governs, not this summary</small></a></p>`;
 }
 
 /* The program block inside a school card: what this campus does in your major,
@@ -837,6 +874,8 @@ function cardHtml(r, i, fresh) {
         `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${esc(l.label)}<small>${esc(l.note)}</small></a>`).join("")}</p>
 
       ${costSection(s)}
+
+      ${transferSection(s)}
 
       ${programSection(s, profile.majorId)}
 
