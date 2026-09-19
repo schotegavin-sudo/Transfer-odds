@@ -1005,6 +1005,19 @@ await section("The paywall", async () => {
  * exported claimFromSession, and the site booted to an empty shell. Node's
  * resolver answers this question exactly, so ask it about every module. */
 await section("Imports resolve", async () => {
+  /* The entitlement API's address is a guess until somebody deploys the
+     Worker, and a wrong one fails silently in the worst way: the site loads,
+     the licence check fails, and a paying reader is quietly shown the free
+     tier. So it is asserted to be a real https URL under the account that
+     actually owns the Worker, rather than left to be noticed in production. */
+  const ent = readFileSync(new URL("./entitlement.js", import.meta.url), "utf8");
+  const api = ent.match(/export const API = "([^"]+)"/)?.[1];
+  ok(api && /^https:\/\//.test(api), `the entitlement API is not an https URL: ${api}`);
+  ok(!/REPLACE|example\.com|localhost/.test(api || ""), `the entitlement API is still a placeholder: ${api}`);
+  const wrangler = readFileSync(new URL("./worker/wrangler.toml", import.meta.url), "utf8");
+  const workerName = wrangler.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
+  ok(api?.includes(workerName), `the API host does not name the worker "${workerName}": ${api}`);
+
   const files = readdirSync(new URL(".", import.meta.url))
     .filter((f) => f.endsWith(".js") && f !== "programs.js" && f !== "costs.js");
   for (const file of files) {

@@ -18,7 +18,7 @@
  * else: the rest of the app asks this module questions, never the network.
  */
 
-export const API = "https://matriculate-api.schotegavin.workers.dev";
+export const API = "https://matriculate-api.schote-gavin.workers.dev";
 export const FREE_LIST_LIMIT = 5;
 
 const STORE = "matriculate:licence:v1";
