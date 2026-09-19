@@ -26,6 +26,8 @@ const STORE = "matriculate:licence:v1";
 let key = null;
 let tier = "free";
 let rows = null;                    /* { costs, earnings } once fetched */
+let plan = null;                    /* "monthly" | "yearly", for the interface */
+let status = null;                  /* the Paddle subscription status */
 const listeners = new Set();
 
 const read = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
@@ -34,6 +36,8 @@ const write = (v) => { try { v ? localStorage.setItem(STORE, v) : localStorage.r
 export const isPaid = () => tier === "paid";
 export const paidRows = () => rows;
 export const licenceKey = () => key;
+export const licencePlan = () => plan;
+export const licenceStatus = () => status;
 export const onEntitlementChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const announce = () => listeners.forEach((f) => { try { f(); } catch {} });
 
@@ -50,6 +54,21 @@ async function fetchRows(k) {
   return { ok: true, costs: body.costs, earnings: body.earnings };
 }
 
+/* What the licence is, as opposed to whether it works. Never gates anything —
+   the data request already decided that — it only lets the interface say
+   "monthly" rather than nothing, and flag a payment Paddle is still retrying. */
+async function fetchPlan(k) {
+  const r = await fetch(API + "/v1/activate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ key: k }),
+  }).catch(() => null);
+  if (!r || !r.ok) return;
+  const body = await r.json().catch(() => ({}));
+  plan = body.plan || null;
+  status = body.status || null;
+}
+
 /* Called once at boot. A network failure must never downgrade someone who has
    paid into a browser that silently hides what they bought — so a key that is
    present but unverifiable leaves the tier alone and reports the reason, and
@@ -63,6 +82,7 @@ export async function restoreEntitlement() {
   if (got.ok) {
     rows = { costs: got.costs, earnings: got.earnings };
     tier = "paid";
+    await fetchPlan(stored);
     announce();
     return { ok: true };
   }
@@ -80,12 +100,13 @@ export async function activate(candidate) {
   rows = { costs: got.costs, earnings: got.earnings };
   tier = "paid";
   write(k);
+  await fetchPlan(k);
   announce();
   return { ok: true };
 }
 
 export function deactivate() {
-  key = null; rows = null; tier = "free";
+  key = null; rows = null; tier = "free"; plan = null; status = null;
   write(null);
   announce();
 }
@@ -117,11 +138,31 @@ export async function claimFromTransaction(txn, { tries = 6, gap = 1500 } = {}) 
 
 /* The API creates a Paddle transaction and hands back the URL of our own
    checkout page with its id attached; Paddle.js opens the overlay there. */
-export async function beginCheckout() {
-  const r = await fetch(API + "/v1/checkout", { method: "POST" }).catch(() => null);
+export async function beginCheckout(chosen) {
+  const r = await fetch(API + "/v1/checkout", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ plan: chosen }),
+  }).catch(() => null);
   if (!r || !r.ok) return { ok: false, error: "unreachable" };
   const body = await r.json();
   if (!body.url) return { ok: false, error: "unreachable" };
   location.href = body.url;
+  return { ok: true };
+}
+
+/* Paddle's own portal, where the subscription is managed and cancelled.
+ * Cancelling has to be as easy as subscribing; an address to write to is not
+ * the same thing. */
+export async function openPortal() {
+  if (!key) return { ok: false, error: "no_licence" };
+  const r = await fetch(API + "/v1/portal", {
+    method: "POST",
+    headers: { authorization: "Bearer " + key },
+  }).catch(() => null);
+  if (!r || !r.ok) return { ok: false, error: "unreachable" };
+  const body = await r.json();
+  if (!body.url) return { ok: false, error: "unreachable" };
+  open(body.url, "_blank", "noopener");
   return { ok: true };
 }

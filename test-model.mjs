@@ -948,6 +948,15 @@ await section("Terms, privacy and notices", () => {
   ok(/Paddle/.test(terms) && /merchant of record/i.test(terms),
     "terms do not identify Paddle as the merchant of record");
   ok(/refund/i.test(terms), "terms carry no refund policy");
+  /* A subscription has disclosures a one-off purchase does not, and they are
+     the ones people litigate over: that it renews, how to stop it, and what
+     happens to the period already paid for. */
+  for (const [what, re] of [
+    ["that it renews automatically", /renews automatically/i],
+    ["how to cancel", /cancel at any time/i],
+    ["what happens to the paid period", /until the end of the period/i],
+    ["both billing periods", /monthly or yearly|yearly plan renews once a year/i],
+  ]) ok(re.test(terms), `terms do not state ${what}`);
   /* The footer is on every page, which is where somebody skimming will look. */
   ok(/Published by Gavin Schote/.test(html), "the footer does not name the publisher");
 });

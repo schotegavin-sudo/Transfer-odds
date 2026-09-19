@@ -22,7 +22,9 @@ PADDLE_API = "https://sandbox-api.paddle.com"
 
 # The Paddle price being sold, and the page on our own domain that carries
 # Paddle.js. Paddle must approve that domain before the hosted checkout works.
-PRICE_ID = "pri_REPLACE"
+# Matriculate Plus is a subscription, so there are two prices.
+PRICE_YEARLY = "pri_01m2vt6mcdgshk0a6hx42p4sr0"
+PRICE_MONTHLY = "pri_01m2vt3m7m6jrd9f7ync0m7t1n"
 # Cloudflare Pages serves this without the .html and redirects the .html form,
 # so the extension-less address is the real one. It must match the default
 # payment link in the Paddle dashboard exactly.

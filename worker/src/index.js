@@ -16,16 +16,20 @@
  *   GET  /v1/health              is it up, and which build of the data
  *   POST /v1/activate            { key } -> { ok, tier, since }
  *   GET  /v1/data                Authorization: Bearer <key> -> the paid tables
- *   POST /v1/checkout            -> { url }  a Paddle-hosted checkout
+ *   POST /v1/checkout            { plan } -> { url }  a Paddle-hosted checkout
  *   POST /v1/paddle              Paddle webhook: mints and revokes licences
  *   POST /v1/claim               { txn } -> { key } after a completed checkout
+ *   POST /v1/portal              Authorization: Bearer <key> -> { url }
+ *                                Paddle's own portal, where a subscription is
+ *                                managed and cancelled
  *
  * Bindings (see wrangler.toml)
  *   LICENCES        KV namespace, licence key -> record
  *   PADDLE_API_KEY  secret, pdl_live_apikey_... (or pdl_sdbx_apikey_...)
  *   PADDLE_WEBHOOK  secret, pdl_ntfset_...
  *   PADDLE_API      https://api.paddle.com, or the sandbox host
- *   PRICE_ID        the Paddle price to sell, pri_...
+ *   PRICE_MONTHLY   the Paddle price for the monthly plan, pri_...
+ *   PRICE_YEARLY    the Paddle price for the yearly plan, pri_...
  *   CHECKOUT_URL    the page on our own domain that carries Paddle.js
  *   SITE            allowed origins, comma separated
  */
@@ -74,11 +78,23 @@ const normaliseKey = (k) =>
   String(k || "").toUpperCase().replace(/[^0-9A-Z]/g, "")
     .replace(/^MTRC/, "").replace(/(.{5})/g, "$1-").replace(/-$/, "");
 
+/* Which subscription states carry access.
+ *
+ * past_due is deliberately included. A failed card is not a cancellation:
+ * Paddle retries for days and only then cancels, and taking the product away
+ * the hour a renewal bounces punishes somebody whose bank declined a payment
+ * they intended to make. Paddle's eventual cancellation revokes it properly.
+ *
+ * paused and canceled do not. Paddle keeps a cancelled subscription active
+ * until the end of the period it was paid for and only then reports canceled,
+ * so revoking here takes nothing away that was paid for. */
+const ENTITLING = new Set(["active", "trialing", "past_due"]);
+
 async function readLicence(env, key) {
   const id = normaliseKey(key);
   if (!/^[0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5}$/.test(id)) return null;
   const rec = await env.LICENCES.get("k:" + id, "json");
-  if (!rec || rec.status !== "active") return null;
+  if (!rec || !ENTITLING.has(rec.status)) return null;
   return { id, ...rec };
 }
 
@@ -162,7 +178,7 @@ export default {
         const { key } = await req.json().catch(() => ({}));
         const lic = await readLicence(env, key);
         if (!lic) return json({ ok: false, error: "no_such_licence" }, 404, head);
-        return json({ ok: true, tier: "paid", since: lic.created }, 200, head);
+        return json({ ok: true, tier: "paid", since: lic.created, plan: lic.plan, status: lic.status }, 200, head);
       }
 
       /* ---- data: the paid tables, only with a live licence ---- */
@@ -183,13 +199,36 @@ export default {
       /* ---- checkout ----
          Paddle's hosted checkout is a page on our own approved domain that
          carries Paddle.js; the API hands back its URL with the transaction id
-         appended, and Paddle.js opens the overlay when the buyer lands. */
+         appended, and Paddle.js opens the overlay when the buyer lands.
+
+         The plan is a name, never a price id. A route that billed whatever
+         price the caller passed would let anyone check out against any price
+         in the account, including one meant for somebody else. */
       if (url.pathname === "/v1/checkout" && req.method === "POST") {
+        const { plan } = await req.json().catch(() => ({}));
+        const price = plan === "yearly" ? env.PRICE_YEARLY
+                    : plan === "monthly" ? env.PRICE_MONTHLY
+                    : null;
+        if (!price) return json({ ok: false, error: "bad_plan" }, 400, head);
         const txn = await paddle(env, "/transactions", {
-          items: [{ price_id: env.PRICE_ID, quantity: 1 }],
+          items: [{ price_id: price, quantity: 1 }],
           checkout: { url: env.CHECKOUT_URL },
         });
         return json({ url: txn.checkout?.url, txn: txn.id }, 200, head);
+      }
+
+      /* ---- portal: where a subscription is managed and cancelled ----
+         Cancelling has to be as easy as subscribing, and the only honest way
+         to do that is to hand the reader Paddle's own portal rather than an
+         address to write to. */
+      if (url.pathname === "/v1/portal" && req.method === "POST") {
+        const key = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+        const lic = await readLicence(env, key);
+        if (!lic || !lic.customer) return json({ ok: false, error: "not_entitled" }, 402, head);
+        const session = await paddle(env, `/customers/${lic.customer}/portal-sessions`,
+          lic.subscription ? { subscription_ids: [lic.subscription] } : {});
+        const deep = session.urls?.subscriptions?.[0]?.cancel_subscription;
+        return json({ url: deep || session.urls?.general?.overview }, 200, head);
       }
 
       /* ---- webhook ---- */
@@ -201,38 +240,61 @@ export default {
         const evt = JSON.parse(raw);
         const o = evt.data || {};
 
-        if (evt.event_type === "transaction.completed") {
+        /* Access follows the subscription, not the payment.
+           An earlier version minted on transaction.completed, which is wrong
+           for anything recurring in two directions at once: every renewal is
+           another completed transaction, so it would have handed the same
+           person a fresh licence every month, and a cancellation is not a
+           transaction at all, so nothing would ever have been taken away.
+           Paddle's own guidance is these two events, and subscription.updated
+           covers renewals, upgrades, pauses and cancellations alike. */
+        if (evt.event_type === "subscription.created") {
           /* Paddle retries a delivery it did not hear back from, so minting
-             must be idempotent: the transaction id is the identity of the
-             purchase, and a second delivery returns the first key rather than
-             handing the same buyer a second licence. */
-          const existing = await env.LICENCES.get("t:" + o.id);
+             must be idempotent: the subscription is the identity of the
+             purchase, and a second delivery returns the first key. */
+          const existing = await env.LICENCES.get("s:" + o.id);
           if (existing) return json({ ok: true, key: existing });
 
           const key = mintKey();
           const rec = {
-            status: "active",
+            status: o.status || "active",
             created: new Date().toISOString().slice(0, 10),
-            email: o.customer?.email || o.billing_details?.email || null,
-            txn: o.id,
+            email: o.customer?.email || null,
+            subscription: o.id,
             customer: o.customer_id || null,
+            plan: o.items?.[0]?.price?.id === env.PRICE_YEARLY ? "yearly" : "monthly",
           };
           await env.LICENCES.put("k:" + key.replace(/^MTRC-/, ""), JSON.stringify(rec));
-          await env.LICENCES.put("t:" + o.id, key);
+          await env.LICENCES.put("s:" + o.id, key);
+          /* The browser comes back holding the transaction id, not the
+             subscription, so the claim needs this second way in. */
+          if (o.transaction_id) await env.LICENCES.put("t:" + o.transaction_id, key);
           return json({ ok: true });
         }
 
-        /* A refund or a chargeback ends the licence. Paddle models both as an
-           adjustment against the original transaction, so the transaction id
-           leads straight back to the key that was minted for it. */
+        if (evt.event_type === "subscription.updated") {
+          const key = await env.LICENCES.get("s:" + o.id);
+          if (!key) return json({ ok: true, ignored: "unknown_subscription" });
+          const id = key.replace(/^MTRC-/, "");
+          const rec = await env.LICENCES.get("k:" + id, "json");
+          if (rec) await env.LICENCES.put("k:" + id, JSON.stringify({
+            ...rec,
+            status: o.status || rec.status,
+            plan: o.items?.[0]?.price?.id === env.PRICE_YEARLY ? "yearly" : "monthly",
+          }));
+          return json({ ok: true, status: o.status });
+        }
+
+        /* A refund or a chargeback ends it regardless of what the
+           subscription says, and Paddle models both as an adjustment. */
         if (evt.event_type === "adjustment.created" &&
             ["refund", "chargeback", "chargeback_warning"].includes(o.action)) {
-          const key = o.transaction_id && await env.LICENCES.get("t:" + o.transaction_id);
+          const key = o.subscription_id && await env.LICENCES.get("s:" + o.subscription_id);
           if (key) {
             const id = key.replace(/^MTRC-/, "");
             const rec = await env.LICENCES.get("k:" + id, "json");
             if (rec) await env.LICENCES.put("k:" + id,
-              JSON.stringify({ ...rec, status: "revoked", revoked: o.action }));
+              JSON.stringify({ ...rec, status: "canceled", revoked: o.action }));
           }
           return json({ ok: true });
         }
@@ -240,7 +302,7 @@ export default {
         return json({ ok: true, ignored: evt.event_type });
       }
 
-      /* ---- claim: exchange a completed transaction for its key ---- */
+      /* ---- claim: exchange a completed checkout for its key ---- */
       if (url.pathname === "/v1/claim" && req.method === "POST") {
         const { txn } = await req.json().catch(() => ({}));
         if (!/^txn_[A-Za-z0-9]+$/.test(String(txn || "")))

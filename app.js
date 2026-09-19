@@ -10,7 +10,8 @@ import { buildSlate } from "./fit.js";
 import { costFor, INCOME_BANDS } from "./cost-model.js";
 import { policyFor, assistLink } from "./transfer-policy.js";
 import { isPaid, listLimit, FREE_LIST_LIMIT, activate, deactivate, licenceKey,
-         restoreEntitlement, claimFromTransaction, beginCheckout, onEntitlementChange } from "./entitlement.js";
+         restoreEntitlement, claimFromTransaction, beginCheckout, onEntitlementChange,
+         licencePlan, licenceStatus, openPortal } from "./entitlement.js";
 
 /* ----------------------------------------------------------- reference */
 
@@ -1538,12 +1539,24 @@ function renderPlusState() {
   const paid = isPaid();
   const state = el("plusstate"), buy = el("plusbuy"), out = el("plussignout");
   if (!state) return;
+  const period = licencePlan() === "yearly" ? "yearly" : licencePlan() === "monthly" ? "monthly" : null;
   state.textContent = paid
-    ? "Plus is active in this browser. Cost, completion and graduate outcomes are showing on every card."
+    ? `Plus is active in this browser${period ? ` on the ${period} plan` : ""}. Cost, completion and graduate outcomes are showing on every card.`
     : "Everything the estimates are built on stays free. Plus adds the money and the outcomes.";
   if (buy) buy.hidden = paid;
   if (out) out.hidden = !paid;
-  el("pluskeymsg").textContent = paid ? `Licence ${licenceKey()} is active on this device.` : "";
+  const portal = el("plusportal");
+  if (portal) portal.hidden = !paid;
+  const plans = document.querySelector(".plans");
+  if (plans) plans.hidden = paid;
+
+  /* A card Paddle is still retrying is worth saying out loud: access has not
+     been taken away, but it will be if the payment never clears, and nobody
+     wants to discover that by losing the product. */
+  el("pluskeymsg").textContent = !paid ? ""
+    : licenceStatus() === "past_due"
+      ? `Licence ${licenceKey()} is active, but your last payment did not go through. Paddle will try again — update your card from the button below to avoid losing access.`
+      : `Licence ${licenceKey()} is active on this device.`;
   el("share").disabled = !paid;
   el("export").disabled = !paid;
   el("export").title = paid ? "" : "Part of Matriculate Plus";
@@ -1555,6 +1568,7 @@ const ENTITLEMENT_MESSAGE = {
   unreachable: "Could not reach the licence service. Your key is fine — try again in a moment.",
   empty: "Paste the key from your receipt first.",
   not_ready: "The payment went through, but the licence has not come back yet. It usually takes a few seconds — reload this page, and if it still is not here, write to the address on the terms page with your Paddle receipt.",
+  bad_plan: "Pick a billing period first.",
   bad_transaction: "That checkout could not be matched. Write to the address on the terms page with your Paddle receipt and it will be sorted out.",
   no_licence: "",
 };
@@ -1576,12 +1590,19 @@ el("plusactivate")?.addEventListener("click", async () => {
 });
 
 el("plusbuy")?.addEventListener("click", async () => {
+  const chosen = document.querySelector('input[name="plusplan"]:checked')?.value || "yearly";
   el("plusbuy").disabled = true;
-  const r = await beginCheckout();
+  const r = await beginCheckout(chosen);
   if (!r.ok) {
     el("plusbuy").disabled = false;
-    el("pluskeymsg").textContent = ENTITLEMENT_MESSAGE.unreachable;
+    el("pluskeymsg").textContent = ENTITLEMENT_MESSAGE[r.error] || ENTITLEMENT_MESSAGE.unreachable;
   }
+});
+
+el("plusportal")?.addEventListener("click", async () => {
+  const r = await openPortal();
+  if (!r.ok) el("pluskeymsg").textContent =
+    "Could not open the billing portal. Every Paddle receipt also links to it, or write to the address on the terms page.";
 });
 
 el("plussignout")?.addEventListener("click", () => {

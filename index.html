@@ -405,7 +405,23 @@
             <li><b>CSV export and share links</b></li>
           </ul>
           <p class="plusnote">These figures are not in this page. They are held by the entitlement API and sent only to a browser with a licence — so there is nothing here to unlock, and nothing being hidden from you.</p>
-          <p><button type="button" class="btn primary" id="plusbuy">Get Plus</button></p>
+
+          <fieldset class="plans">
+            <legend class="visually-hidden">Choose a billing period</legend>
+            <label class="plan">
+              <input type="radio" name="plusplan" value="yearly" checked>
+              <span class="planname">Yearly</span>
+              <span class="planwhy">Best if you are applying this cycle and next</span>
+            </label>
+            <label class="plan">
+              <input type="radio" name="plusplan" value="monthly">
+              <span class="planname">Monthly</span>
+              <span class="planwhy">Cancel any time; one application season is a few months</span>
+            </label>
+          </fieldset>
+
+          <p><button type="button" class="btn primary" id="plusbuy">Continue to checkout</button></p>
+          <p class="plusnote"><b>This is a subscription and it renews automatically</b> until you cancel — yearly plans once a year, monthly plans once a month, at the price shown at checkout. Paddle will email you a receipt each time. <b>Cancel whenever you like</b> from the Matriculate Plus tab or from any Paddle receipt; you keep access until the end of the period you have already paid for, and you are not charged again. Prices, currency and any tax are shown before you pay.</p>
         </div>
       </div>
 
@@ -417,7 +433,10 @@
         <button type="button" class="btn" id="plusactivate">Activate</button>
       </div>
       <p class="sub" id="pluskeymsg" role="status" aria-live="polite"></p>
-      <p><button type="button" class="btn sm" id="plussignout" hidden>Remove this licence from this browser</button></p>
+      <p>
+        <button type="button" class="btn" id="plusportal" hidden>Manage or cancel your subscription</button>
+        <button type="button" class="btn sm" id="plussignout" hidden>Remove this licence from this browser</button>
+      </p>
     </section>
 
     <section class="pane glass method" id="pane-legal" role="tabpanel" aria-label="Terms of use" hidden>
@@ -481,13 +500,16 @@
 
         <h4>12. Paying for Matriculate Plus</h4>
         <p><b>What is free.</b> Admission estimates for every school, best fits, how large each programme is, deadlines, the state transfer guarantees, the offline copy, and a saved list of up to five schools. Nothing that was free has been taken away to make Plus.</p>
-        <p><b>What Plus adds.</b> Net price by household income band, published tuition and the non-resident premium, the federal graduation and retention rates, graduate earnings and debt by programme, an unlimited list, CSV export and share links.</p>
+        <p><b>What Plus adds</b>, on a monthly or yearly subscription. Net price by household income band, published tuition and the non-resident premium, the federal graduation and retention rates, graduate earnings and debt by programme, an unlimited list, CSV export and share links.</p>
         <p><b>Who you are buying from.</b> Matriculate Plus is a product of <b>Gavin Schote</b>, sole proprietor, trading as Matriculate. Payment is handled by <b>Paddle.com Market Limited</b>, who are the merchant of record — legally the seller for the transaction. Your receipt and card statement will say Paddle, and Paddle collect and remit any sales tax or VAT due. Their terms and privacy policy apply to the transaction itself.</p>
         <p><b>What you get.</b> A licence key, shown on the page you are returned to after paying. Paste it into the Matriculate Plus tab of any browser you want it active in. There is no account and no password. The key is not tied to one device; treat it as you would a password, because anyone who has it can use it.</p>
-        <p><b>Refunds.</b> Write to the address below within <b>30 days</b> and you will be refunded, no reasons needed. Refunds are issued by Paddle, and the licence stops working when one is processed. Nothing about the free part of the site changes.</p>
-        <p><b>If something goes wrong.</b> If a payment succeeds and no licence arrives, write to the address below with the Paddle receipt and it will be issued by hand. If Plus stops working for a reason that is not a refund or a chargeback, that is a fault and it will be fixed or refunded.</p>
+        <p><b>It is a subscription, and it renews automatically.</b> A yearly plan renews once a year and a monthly plan once a month, at the price shown to you at checkout, until you cancel. Paddle emails a receipt for every charge. If the price ever changes, the change applies from your next renewal and never retroactively, and you will be told before it takes effect.</p>
+        <p><b>Cancelling.</b> Cancel at any time, with no reason and no conversation, from the <b>Manage or cancel your subscription</b> button on the Matriculate Plus tab, or from the link in any Paddle receipt. Cancelling stops the next charge. <b>You keep Plus until the end of the period you have already paid for</b>, and it ends then rather than immediately, because you paid for that period.</p>
+        <p><b>If a payment fails.</b> Paddle retries for several days. Access is not taken away while it is retrying, and the Plus tab says what is happening so you can update your card. If it never clears, the subscription is cancelled and Plus ends.</p>
+        <p><b>Refunds.</b> Write to the address below within <b>30 days</b> of a charge and it will be refunded, no reasons needed — including a renewal you did not mean to let happen. Refunds are issued by Paddle, and the licence stops working when one is processed. Nothing about the free part of the site changes.</p>
+        <p><b>If something goes wrong.</b> If a payment succeeds and no licence arrives, write to the address below with the Paddle receipt and it will be issued by hand. If Plus stops working for a reason that is not a cancellation, a refund or a chargeback, that is a fault and it will be fixed or refunded.</p>
         <p><b>What is not promised.</b> Plus buys access to figures as the federal government published them, not accuracy beyond what the Department of Education itself provides, and not any particular outcome. The whole of section 4 applies to them.</p>
-        <p><b>Ending it.</b> The publisher may stop selling Plus at any time. Licences already sold keep working for as long as the site runs; if the site is withdrawn within twelve months of a purchase, that purchase will be refunded on request.</p>
+        <p><b>Ending it.</b> The publisher may stop selling Plus at any time. Existing subscriptions keep working until their current period ends and are not renewed after that, with no further charge. If the site is withdrawn mid-period, the unused part of that period is refunded on request.</p>
 
         <h4>13. Minors</h4>
         <p>The site is intended for prospective transfer students, who are generally adults. It collects no personal information from anyone, of any age. If you are under 13, ask a parent or guardian before using it.</p>
