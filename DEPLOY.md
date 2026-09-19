@@ -13,18 +13,37 @@ Cloudflare Pages builds straight from the repository. In the dashboard:
 
 | Setting | Value |
 | --- | --- |
+| Project name | `matriculate` — this decides the hostname |
+| Production branch | `main` |
 | Framework preset | None |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Node version | 22 (set `NODE_VERSION=22` under environment variables) |
 
 Then set these environment variables, for Production:
 
 | Variable | Value | Why |
 | --- | --- | --- |
 | `SITE_URL` | `https://matriculate.pages.dev` | canonical link, sitemap, social card |
+| `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` | `1` | see below — set this one first |
 | `PADDLE_ENV` | `sandbox`, later `live` | which Paddle the checkout page talks to |
 | `PADDLE_TOKEN` | the Paddle client-side token | public value, but it differs per environment |
+
+`NODE_VERSION` does not need setting: the current Pages build image ships
+Node 22. Set it to `22` anyway if a future image default moves under you.
+
+### Why PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+
+The build itself needs **nothing** — `build-site.mjs` imports only Node
+builtins and runs from a clean clone with no `node_modules` at all. But Pages
+sees a `package.json` and runs `npm install` before the build command, which
+installs Playwright, whose postinstall then tries to download a browser. That
+is a slow, large, failure-prone step for a build that does not use it. The
+variable tells Playwright to skip the download; the install still succeeds and
+the build never touches it.
+
+`PADDLE_TOKEN` can be left unset for the first deploy. The checkout page will
+carry its placeholder and will not open a checkout, which is correct — there is
+no Paddle product yet. Everything else works.
 
 The project name decides the subdomain: name it `matriculate` and the site is
 served at `matriculate.pages.dev`. If that name is taken, Cloudflare will give
