@@ -360,11 +360,18 @@ writeFileSync(join(dist, "checkout.html"), legalHead("Checkout — Matriculate",
 writeFileSync(join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 
 /* GitHub Pages serves a custom domain once a CNAME file is present at the site
-   root. Only written when SITE_URL actually names one — the default *.github.io
-   fallback needs no such file, and writing one for it would point Pages at a
-   domain it does not own. */
+   root. It is written only when SITE_URL names a domain we actually own.
+
+   A host's own free subdomain is not that, and the list has to name every one
+   of them: this guard excluded github.io alone, so when the default SITE_URL
+   moved to matriculate.pages.dev the build started emitting a CNAME pointing
+   GitHub Pages at a Cloudflare address — which GitHub does not own, and which
+   would have taken that site down had the workflow not been passing its own
+   SITE_URL. Harmless on Cloudflare, which ignores the file, and wrong
+   everywhere. */
 const siteHost = new URL(SITE_URL).hostname;
-if (!/\.github\.io$/.test(siteHost)) {
+const HOST_SUBDOMAIN = /\.(github\.io|pages\.dev|workers\.dev|netlify\.app|vercel\.app)$/;
+if (!HOST_SUBDOMAIN.test(siteHost)) {
   writeFileSync(join(dist, "CNAME"), siteHost + "\n");
   console.log(`  CNAME -> ${siteHost}`);
 }
