@@ -16,9 +16,9 @@ const env = {
     put: async (k, v) => void store.set(k, v),
   },
   PADDLE_WEBHOOK: "pdl_ntfset_TESTSECRET",
-  SITE: "https://schotegavin-sudo.github.io",
+  SITE: "https://matriculate.pages.dev",
 };
-const ORIGIN = { Origin: "https://schotegavin-sudo.github.io" };
+const ORIGIN = { Origin: "https://matriculate.pages.dev" };
 let pass = 0, fail = 0;
 const ok = (c, m) => c ? pass++ : (fail++, console.log("  FAIL " + m));
 

@@ -142,7 +142,7 @@ nothing — no build flag, no revert, no behaviour change for anyone who does no
 type it.
 
 ```
-https://schotegavin-sudo.github.io/transfer-odds/?fresh
+https://matriculate.pages.dev/?fresh
 ```
 
 ### Cost and completion

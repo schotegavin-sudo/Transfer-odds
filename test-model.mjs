@@ -937,6 +937,19 @@ await section("Terms, privacy and notices", () => {
 
   /* The rebrand must be complete on every generated page. */
   ok(!/>TO</.test(html), "the pre-rebrand TO mark is still in index.html");
+
+  /* Selling requires saying who is selling. Paddle asks for a sole
+     proprietor's legal name to be clearly accessible before they will approve
+     the site, and a buyer is entitled to know who took their money — so this
+     is load-bearing, not decoration, and it is asserted rather than trusted. */
+  for (const [name, d] of [["terms", terms], ["privacy", privacy], ["notices", notices]])
+    ok(/Gavin Schote/.test(d), `${name} does not name the publisher`);
+  ok(/sole proprietor/i.test(terms), "terms do not state the trading status");
+  ok(/Paddle/.test(terms) && /merchant of record/i.test(terms),
+    "terms do not identify Paddle as the merchant of record");
+  ok(/refund/i.test(terms), "terms carry no refund policy");
+  /* The footer is on every page, which is where somebody skimming will look. */
+  ok(/Published by Gavin Schote/.test(html), "the footer does not name the publisher");
 });
 
 /* 20. The paywall: absent, not hidden.
