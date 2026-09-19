@@ -100,8 +100,24 @@ async function readLicence(env, key) {
 
 /* ------------------------------------------------------------------- paddle */
 
+/* Paddle refuses a request for reasons worth telling apart — a key from the
+   wrong environment, a price that does not exist in this one, a domain not yet
+   approved — and an unexplained 500 leaves no way to know which. The reason is
+   logged for `wrangler tail`, and a short code goes back to the caller so the
+   interface can say something true without ever echoing Paddle's response,
+   which can quote the request back including the key. */
+class PaddleError extends Error {
+  constructor(code, detail, status) {
+    super(detail || code);
+    this.code = code;
+    this.status = status;
+  }
+}
+
 async function paddle(env, path, body) {
-  const r = await fetch((env.PADDLE_API || "https://api.paddle.com") + path, {
+  if (!env.PADDLE_API_KEY) throw new PaddleError("no_api_key", "PADDLE_API_KEY is not set", 0);
+  const host = env.PADDLE_API || "https://api.paddle.com";
+  const r = await fetch(host + path, {
     method: "POST",
     headers: {
       authorization: "Bearer " + env.PADDLE_API_KEY,
@@ -109,8 +125,19 @@ async function paddle(env, path, body) {
     },
     body: JSON.stringify(body),
   });
-  const out = await r.json();
-  if (!r.ok) throw new Error(out?.error?.detail || "paddle " + r.status);
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const detail = out?.error?.detail || out?.error?.code || "";
+    /* Sandbox and live are separate accounts with separate catalogues, so a
+       live key against the sandbox host, or a price that only exists in the
+       other environment, both land here and look alike from the outside. */
+    const code =
+      r.status === 401 || r.status === 403 ? "paddle_auth"
+      : /not.?found|does not exist/i.test(detail) ? "paddle_missing_price"
+      : "paddle_rejected";
+    console.error(`paddle ${r.status} ${code} on ${path} via ${host}: ${detail}`);
+    throw new PaddleError(code, detail, r.status);
+  }
   return out.data;
 }
 
@@ -316,6 +343,9 @@ export default {
 
       return json({ ok: false, error: "not_found" }, 404, head);
     } catch (err) {
+      if (err instanceof PaddleError)
+        return json({ ok: false, error: err.code }, 502, head);
+      console.error("unhandled: " + (err?.stack || err));
       return json({ ok: false, error: "server_error" }, 500, head);
     }
   },

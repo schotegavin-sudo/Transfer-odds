@@ -1569,6 +1569,13 @@ function renderPlusState() {
 const CHECKOUT_MESSAGE = {
   unreachable: "Could not reach the payment service, so nothing was charged and nothing was started. Try again in a moment; if it keeps happening, write to the address on the terms page.",
   bad_plan: "Choose monthly or yearly first.",
+  /* These three mean the shop is misconfigured rather than the reader being at
+     fault, so they say so plainly instead of inviting somebody to try again
+     at something that cannot work yet. */
+  paddle_auth: "Checkout is not set up correctly yet, so nothing was charged. This is a fault at our end, not yours — please write to the address on the terms page.",
+  paddle_missing_price: "That plan is not available to buy yet, and nothing was charged. This is a fault at our end — please write to the address on the terms page.",
+  paddle_rejected: "The payment service refused to open a checkout, so nothing was charged. Please try again, and write to the address on the terms page if it keeps happening.",
+  no_api_key: "Checkout is not switched on yet, so nothing was charged.",
 };
 
 const ENTITLEMENT_MESSAGE = {
