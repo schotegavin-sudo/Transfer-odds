@@ -25,6 +25,7 @@ Then set these environment variables, for Production:
 | --- | --- | --- |
 | `SITE_URL` | `https://matriculate.pages.dev` | canonical link, sitemap, social card |
 | `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` | `1` | see below — set this one first |
+| `CLEAN_URLS` | `1` | see below — Pages serves `/terms`, not `/terms.html` |
 | `PADDLE_ENV` | `sandbox`, later `live` | which Paddle the checkout page talks to |
 | `PADDLE_TOKEN` | the Paddle client-side token | public value, but it differs per environment |
 
@@ -40,6 +41,18 @@ installs Playwright, whose postinstall then tries to download a browser. That
 is a slow, large, failure-prone step for a build that does not use it. The
 variable tells Playwright to skip the download; the install still succeeds and
 the build never touches it.
+
+### Why CLEAN_URLS
+
+Cloudflare Pages serves `/terms` and permanently redirects `/terms.html` to
+it. GitHub Pages does the opposite: only `/terms.html` exists. Same files,
+different addresses — and the address is what goes into a canonical link, a
+sitemap entry, and Paddle's default payment link. Without this variable all
+three point at a URL that redirects, which search engines treat as a mistake
+and which makes the Paddle payment link disagree with the page it opens.
+
+Set it on Cloudflare. Leave it unset for a GitHub Pages build. The files on
+disk are named `.html` either way, so nothing else has to change.
 
 `PADDLE_TOKEN` can be left unset for the first deploy. The checkout page will
 carry its placeholder and will not open a checkout, which is correct — there is

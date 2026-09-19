@@ -19,6 +19,15 @@ const dist = join(here, "dist");
 const site = join(here, "site");
 
 const SITE_URL = (process.env.SITE_URL || "https://matriculate.pages.dev").replace(/\/$/, "");
+
+/* Cloudflare Pages serves /terms and permanently redirects /terms.html to it.
+ * GitHub Pages serves only /terms.html. Both host the same files; they
+ * disagree about the address, and the address is what goes in a canonical
+ * link, a sitemap and Paddle's payment link — three places where pointing at a
+ * redirect is a small ongoing wrong answer. CLEAN_URLS=1 emits the
+ * extension-less form. The files on disk keep their .html names either way. */
+const CLEAN_URLS = process.env.CLEAN_URLS === "1";
+const linkTo = (file) => (CLEAN_URLS ? file.replace(/\.html$/, "") : file);
 const TITLE = "Matriculate — transfer admission chances at 588 US colleges";
 const DESC = "Enter your GPA, credits, residency and major once. Every school is scored against the transfer applicant pool you would actually compete with there.";
 
@@ -133,11 +142,11 @@ if ("serviceWorker" in navigator) {
 </html>
 `;
 
-const pageBody = body
-  .replace(/<script type="module"[\s\S]*?<\/script>/, "")
-  .replace(
-    '<a href="#about">About</a> · <a href="#privacy">Privacy</a> · <a href="#data">Data</a>',
-    '<a href="#about">About</a> · <a href="#data">Data</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a>');
+/* The in-app legal links are tab buttons, not anchors, so there is nothing
+   here to rewrite: the standalone pages are reached from the drawer. An
+   earlier version rewrote a footer that no longer exists, and the replacement
+   sat here matching nothing for long enough to look load-bearing. */
+const pageBody = body.replace(/<script type="module"[\s\S]*?<\/script>/, "");
 writeFileSync(join(dist, "index.html"), head + pageBody + tail);
 
 writeFileSync(join(dist, "manifest.webmanifest"), JSON.stringify({
@@ -255,7 +264,7 @@ writeFileSync(join(dist, "matriculate-offline.html"), singleFile);
 const legalHead = (title, desc, path) => head
   .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
   .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${desc}">`)
-  .replace(`<link rel="canonical" href="${SITE_URL}/">`, `<link rel="canonical" href="${SITE_URL}/${path}">`)
+  .replace(`<link rel="canonical" href="${SITE_URL}/">`, `<link rel="canonical" href="${SITE_URL}/${linkTo(path)}">`)
   .replace("<style>[hidden]", '<link rel="stylesheet" href="legal.css">\n<style>[hidden]');
 
 const legalDoc = (id) => {
@@ -285,7 +294,7 @@ for (const [file, id, title, desc] of [
 </div></div>
 <footer class="siteft">
   <span>Matriculate — a planning tool, not a prediction.</span>
-  <span><a href="./">Calculator</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="notices.html">Notices</a></span>
+  <span><a href="./">Calculator</a> · <a href="${linkTo("terms.html")}">Terms</a> · <a href="${linkTo("privacy.html")}">Privacy</a> · <a href="${linkTo("notices.html")}">Notices</a></span>
 </footer>
 </body>
 </html>
@@ -362,9 +371,9 @@ if (!/\.github\.io$/.test(siteHost)) {
 writeFileSync(join(dist, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_URL}/</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>
-  <url><loc>${SITE_URL}/terms.html</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>${SITE_URL}/privacy.html</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>${SITE_URL}/notices.html</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>${SITE_URL}/${linkTo("terms.html")}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>${SITE_URL}/${linkTo("privacy.html")}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>${SITE_URL}/${linkTo("notices.html")}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>yearly</changefreq><priority>0.2</priority></url>
 </urlset>
 `);
 writeFileSync(join(dist, "404.html"), head + `<div class="aurora" aria-hidden="true"><b></b><b></b><b></b></div>
