@@ -1097,3 +1097,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .plan input { grid-row: 1 / 3; align-self: center; accent-color: var(--accent); }
 .planname { font-weight: 600; font-size: 0.8125rem; color: var(--ink); }
 .planwhy { grid-column: 2; font-size: 0.75rem; color: var(--ink-2); line-height: 1.5; }
+
+.buymsg { margin: -4px 0 10px; font-size: 0.75rem; color: var(--ink-2); line-height: 1.55; max-width: 52ch; }
+.buymsg:empty { display: none; }
+.buymsg.bad { color: var(--reach); }

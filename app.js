@@ -1563,6 +1563,14 @@ function renderPlusState() {
   el("share").title = paid ? "" : "Part of Matriculate Plus";
 }
 
+/* A failure to open the checkout is a different situation from a licence that
+   will not activate, and the reassurance that belongs in one ("your key is
+   fine") is meaningless in the other. */
+const CHECKOUT_MESSAGE = {
+  unreachable: "Could not reach the payment service, so nothing was charged and nothing was started. Try again in a moment; if it keeps happening, write to the address on the terms page.",
+  bad_plan: "Choose monthly or yearly first.",
+};
+
 const ENTITLEMENT_MESSAGE = {
   not_entitled: "That key is not active. Check it against your receipt, or write to the address on the terms page.",
   unreachable: "Could not reach the licence service. Your key is fine — try again in a moment.",
@@ -1589,14 +1597,32 @@ el("plusactivate")?.addEventListener("click", async () => {
   renderPlusState();
 });
 
+/* Opening the checkout.
+ *
+ * On success this navigates away, so the only states worth designing are the
+ * wait and the failure. Both used to be invisible: the button did not change,
+ * and the failure was written into a status line 550 pixels further down the
+ * page, in the section about entering a licence you already own. Pressing it
+ * and seeing nothing happen is the one outcome a buy button must never have,
+ * so the message now sits under the button, and the toast carries it as well
+ * for anyone who has scrolled. */
 el("plusbuy")?.addEventListener("click", async () => {
   const chosen = document.querySelector('input[name="plusplan"]:checked')?.value || "yearly";
-  el("plusbuy").disabled = true;
+  const btn = el("plusbuy"), msg = el("plusbuymsg");
+  btn.disabled = true;
+  btn.textContent = "Opening checkout…";
+  msg.textContent = "";
+  msg.className = "buymsg";
+
   const r = await beginCheckout(chosen);
-  if (!r.ok) {
-    el("plusbuy").disabled = false;
-    el("pluskeymsg").textContent = ENTITLEMENT_MESSAGE[r.error] || ENTITLEMENT_MESSAGE.unreachable;
-  }
+  if (r.ok) return;                         /* navigating to Paddle */
+
+  btn.disabled = false;
+  btn.textContent = "Continue to checkout";
+  const text = CHECKOUT_MESSAGE[r.error] || CHECKOUT_MESSAGE.unreachable;
+  msg.textContent = text;
+  msg.className = "buymsg bad";
+  say(text, "cap");
 });
 
 el("plusportal")?.addEventListener("click", async () => {
